@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoidX Media | MSE Interactive Sandbox</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --brand-accent: #00f0ff;
+            --brand-dark: #020617;
+            --surface-color: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body, html { margin: 0; padding: 0; background-color: var(--brand-dark); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-x: hidden; }
+
+        .grid-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -10; background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 50px 50px; }
+
+        nav { padding: 30px 5vw; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; letter-spacing: 2px; text-decoration: none; }
+        .logo span { color: var(--brand-accent); }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+        .back-link:hover { color: var(--brand-accent); }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 60px 5vw; }
+
+        h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; font-weight: 700; margin: 0 0 10px 0; letter-spacing: -1px; text-align: center; }
+        .subtitle { text-align: center; color: var(--text-muted); font-size: 1rem; margin-bottom: 50px; letter-spacing: 2px; text-transform: uppercase; }
+
+        /* --- TAB NAVIGATION SYSTEM --- */
+        .tab-container { display: flex; gap: 20px; justify-content: center; margin-bottom: 40px; flex-wrap: wrap; }
+        .tab-btn { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); padding: 15px 30px; font-family: 'Space Grotesk', sans-serif; font-size: 1rem; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 10px; }
+        .tab-btn:hover { border-color: rgba(0, 240, 255, 0.4); color: #fff; }
+        .tab-btn.active { background: rgba(0, 240, 255, 0.1); border-color: var(--brand-accent); color: #fff; box-shadow: 0 0 20px rgba(0, 240, 255, 0.15); }
+
+        .tab-content { display: none; animation: fadeIn 0.5s ease-in-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- VIDEO WRAPPER --- */
+        .video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); background: #000; }
+        .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        /* --- SIMULATION STYLES --- */
+        .sim-wrapper { background: #0a0a0a; padding: 40px; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05); border: 1px solid rgba(0, 240, 255, 0.2); display: flex; flex-direction: column; align-items: center; }
+        
+        #mse-display { font-size: 2.5rem; font-weight: bold; color: var(--brand-accent); margin-bottom: 5px; text-shadow: 0 0 15px rgba(0, 240, 255, 0.4); font-variant-numeric: tabular-nums; font-family: 'Space Grotesk', sans-serif; }
+        #formula-display { font-size: 1.2rem; color: #ffffff; margin-bottom: 20px; font-family: monospace; background: #000; padding: 10px 20px; border-radius: 6px; border: 1px solid #333; }
+
+        canvas#mseCanvas { background-color: #050505; border: 1px solid #333333; border-radius: 8px; box-shadow: 0 8px 32px rgba(0, 240, 255, 0.1); margin-bottom: 30px; cursor: crosshair; width: 100%; max-width: 800px; height: auto; aspect-ratio: 16/9; }
+
+        .sim-controls { display: flex; gap: 30px; background-color: #020617; padding: 25px 40px; border-radius: 12px; border: 1px solid #333333; align-items: center; flex-wrap: wrap; justify-content: center; width: 100%; box-sizing: border-box; }
+        .slider-container { display: flex; flex-direction: column; align-items: center; min-width: 220px; flex: 1; }
+        .slider-container label { margin-bottom: 12px; font-size: 1.1rem; color: #cccccc; font-family: 'Inter', sans-serif; }
+        .slider-container span { color: #ffffff; font-weight: bold; font-family: monospace; font-size: 1.2rem; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--brand-accent); }
+
+        button.sim-btn { background-color: #222222; color: var(--brand-accent); border: 1px solid var(--brand-accent); padding: 12px 24px; font-size: 1.1rem; font-weight: bold; font-family: 'Space Grotesk'; border-radius: 6px; cursor: pointer; transition: all 0.2s; margin-top: 10px; }
+        button.sim-btn:hover { background-color: var(--brand-accent); color: #000000; box-shadow: 0 4px 12px rgba(0, 240, 255, 0.4); }
+
+        /* --- GITHUB BUTTON --- */
+        .github-link { display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-top: 30px; padding: 15px 30px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Space Grotesk', sans-serif; text-decoration: none; border-radius: 8px; font-weight: 600; width: 100%; transition: all 0.3s; box-sizing: border-box; }
+        .github-link:hover { background: #fff; color: #000; border-color: #fff; }
+        .github-link svg { width: 20px; height: 20px; fill: currentColor; }
+
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+
+    <nav>
+        <a href="index.html" class="logo">VoidX <span>Initiative</span></a>
+        <a href="mse.html" class="back-link">← Back to Hub</a>
+    </nav>
+
+    <div class="container">
+        <h1>Mean Squared Error</h1>
+        <div class="subtitle">Media & Interactive Simulations</div>
+
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="switchTab('video')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                Visual Intuition (Video)
+            </button>
+            <button class="tab-btn" onclick="switchTab('sim')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                Interactive Sandbox
+            </button>
+        </div>
+
+        <div id="video" class="tab-content active">
+            <div class="video-wrapper">
+                <iframe 
+                    src="https://www.youtube.com/embed/Wk8vycBT4qM" 
+                    title="Error / Loss Functions for Regression" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+            <p style="text-align: center; margin-top: 20px; color: var(--text-muted);">Data Scientist Greg Hogg clearly explains the difference between Absolute Error and Squared Error, and why MSE is vital for calculus-based optimization.</p>
+        </div>
+
+        <div id="sim" class="tab-content">
+            <div class="sim-wrapper">
+                <h2 style="font-family: 'Space Grotesk'; font-size: 1.8rem; margin-top: 0; color: #fff;">Line of Best Fit</h2>
+                <p style="color: #aaa; margin-bottom: 30px;">Drag the white points or adjust the sliders to see how the penalty squares visually expand.</p>
+                
+                <canvas id="mseCanvas" width="800" height="450"></canvas>
+
+                <div id="mse-display">MSE: 0.000</div>
+                <div id="formula-display">y = -0.30x + -2.00</div>
+
+                <div class="sim-controls">
+                    <div class="slider-container">
+                        <label for="slope">Slope (m): <span id="slope-val">-0.30</span></label>
+                        <input type="range" id="slope" min="-2" max="3" step="0.01" value="-0.3">
+                    </div>
+                    <div class="slider-container">
+                        <label for="intercept">Y-Intercept (b): <span id="intercept-val">-2.00</span></label>
+                        <input type="range" id="intercept" min="-5" max="10" step="0.01" value="-2">
+                    </div>
+                    <button class="sim-btn" onclick="autoFit()">Auto-Fit (Least Squares)</button>
+                </div>
+            </div>
+
+            <a href="https://github.com/KRISH9621/Website_" target="_blank" class="github-link">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
+                Access the code of this MSE Simulation
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+    </script>
+
+    <script>
+        const canvas = document.getElementById('mseCanvas');
+        const ctx = canvas.getContext('2d');
+        const slopeSlider = document.getElementById('slope');
+        const interceptSlider = document.getElementById('intercept');
+        const slopeVal = document.getElementById('slope-val');
+        const interceptVal = document.getElementById('intercept-val');
+        const mseDisplay = document.getElementById('mse-display');
+        const formulaDisplay = document.getElementById('formula-display');
+
+        let points = [
+            {x: 1, y: 2}, {x: 2, y: 3}, {x: 3, y: 5}, {x: 4, y: 4}, {x: 5, y: 6}
+        ];
+
+        const minX = 0, maxX = 8;
+        const minY = -4, maxY = 10;
+        let isDragging = false; let dragIndex = -1;
+
+        function mapX(x) { return (x - minX) / (maxX - minX) * canvas.width; }
+        function mapY(y) { return canvas.height - ((y - minY) / (maxY - minY) * canvas.height); }
+        function unmapX(px) { return (px / canvas.width) * (maxX - minX) + minX; }
+        function unmapY(py) { return ((canvas.height - py) / canvas.height) * (maxY - minY) + minY; }
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const m = parseFloat(slopeSlider.value);
+            const b = parseFloat(interceptSlider.value);
+            
+            slopeVal.innerText = m.toFixed(2);
+            interceptVal.innerText = b.toFixed(2);
+            formulaDisplay.innerText = `y = ${m.toFixed(2)}x + ${b.toFixed(2)}`;
+
+            ctx.strokeStyle = '#222222'; ctx.lineWidth = 1;
+            for(let i = minX; i <= maxX; i++) { ctx.beginPath(); ctx.moveTo(mapX(i), 0); ctx.lineTo(mapX(i), canvas.height); ctx.stroke(); }
+            for(let i = minY; i <= maxY; i++) { ctx.beginPath(); ctx.moveTo(0, mapY(i)); ctx.lineTo(canvas.width, mapY(i)); ctx.stroke(); }
+
+            ctx.strokeStyle = '#444444'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, mapY(0)); ctx.lineTo(canvas.width, mapY(0)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(mapX(0), 0); ctx.lineTo(mapX(0), canvas.height); ctx.stroke();
+
+            let totalSquaredError = 0;
+
+            points.forEach(point => {
+                const predictedY = m * point.x + b;
+                const error = point.y - predictedY;
+                totalSquaredError += (error * error);
+
+                const px = mapX(point.x);
+                const py = mapY(point.y);
+                const predY_canvas = mapY(predictedY);
+                const pixelSize = Math.abs(predY_canvas - py); 
+
+                ctx.fillStyle = 'rgba(0, 240, 255, 0.2)'; 
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.5)';
+                ctx.lineWidth = 1;
+
+                ctx.beginPath();
+                if (point.y > predictedY) { ctx.rect(px, py, pixelSize, pixelSize); } 
+                else { ctx.rect(px, predY_canvas, pixelSize, pixelSize); }
+                ctx.fill(); ctx.stroke();
+
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+                ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, predY_canvas); ctx.stroke(); ctx.setLineDash([]); 
+            });
+
+            const mse = totalSquaredError / points.length;
+            mseDisplay.innerText = `MSE: ${mse.toFixed(3)}`;
+
+            ctx.strokeStyle = '#00f0ff'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(mapX(minX), mapY(m * minX + b)); ctx.lineTo(mapX(maxX), mapY(m * maxX + b)); ctx.stroke();
+
+            points.forEach((point, i) => {
+                ctx.fillStyle = '#ffffff'; 
+                ctx.strokeStyle = (i === dragIndex) ? '#ffea00' : '#00f0ff'; 
+                ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(mapX(point.x), mapY(point.y), 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            });
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+            
+            points.forEach((p, i) => {
+                const px = mapX(p.x); const py = mapY(p.y);
+                if (Math.hypot(px - mouseX, py - mouseY) < 15) { isDragging = true; dragIndex = i; }
+            });
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging && dragIndex !== -1) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                points[dragIndex].x = unmapX((e.clientX - rect.left) * scaleX);
+                points[dragIndex].y = unmapY((e.clientY - rect.top) * scaleY);
+                drawGraph();
+            }
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; dragIndex = -1; drawGraph(); });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; dragIndex = -1; drawGraph(); });
+
+        slopeSlider.addEventListener('input', drawGraph);
+        interceptSlider.addEventListener('input', drawGraph);
+
+        window.autoFit = function() {
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            const n = points.length;
+            points.forEach(p => { sumX += p.x; sumY += p.y; sumXY += p.x * p.y; sumX2 += p.x * p.x; });
+            const optimalM = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const optimalB = (sumY - optimalM * sumX) / n;
+            slopeSlider.value = optimalM; interceptSlider.value = optimalB; drawGraph();
+        }
+
+        drawGraph();
+    </script>
+</body>
+</html>

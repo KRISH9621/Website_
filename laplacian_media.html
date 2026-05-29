@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoidX Media | Laplacian Smoothing</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --brand-accent: #00f0ff;
+            --brand-dark: #020617;
+            --surface-color: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background-color: var(--brand-dark); color: var(--text-main);
+            font-family: 'Inter', sans-serif; overflow-x: hidden;
+        }
+
+        /* --- SUBTLE MESH BACKGROUND --- */
+        .grid-bg { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -10;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* --- NAVIGATION --- */
+        nav { padding: 30px 5vw; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; letter-spacing: 2px; text-decoration: none; }
+        .logo span { color: var(--brand-accent); }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+        .back-link:hover { color: var(--brand-accent); }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 60px 5vw; }
+
+        h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; font-weight: 700; margin: 0 0 10px 0; letter-spacing: -1px; text-align: center; }
+        .subtitle { text-align: center; color: var(--text-muted); font-size: 1rem; margin-bottom: 50px; letter-spacing: 2px; text-transform: uppercase; }
+
+        /* --- TAB NAVIGATION SYSTEM --- */
+        .tab-container {
+            display: flex; gap: 20px; justify-content: center; margin-bottom: 40px;
+        }
+        .tab-btn {
+            background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-muted); padding: 15px 30px; font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem; font-weight: 600; border-radius: 8px; cursor: pointer;
+            transition: all 0.3s; display: flex; align-items: center; gap: 10px;
+        }
+        .tab-btn:hover { border-color: rgba(0, 240, 255, 0.4); color: #fff; }
+        .tab-btn.active {
+            background: rgba(0, 240, 255, 0.1); border-color: var(--brand-accent);
+            color: #fff; box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+        }
+
+        /* --- CONTENT PANELS --- */
+        .tab-content { display: none; animation: fadeIn 0.5s ease-in-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- VIDEO WRAPPER --- */
+        .video-wrapper {
+            position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+            border-radius: 12px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1); background: #000;
+        }
+        .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        /* --- SIMULATION STYLES --- */
+        .sim-wrapper {
+            background: #0a0a0a; padding: 40px; border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+        }
+        
+        .sim-layout { display: flex; gap: 40px; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .sim-left { display: flex; flex-direction: column; align-items: center; }
+        .sim-right { flex: 1; min-width: 280px; display: flex; flex-direction: column; justify-content: center; }
+
+        #grid {
+            display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px;
+            background-color: #333; border: 1px solid #333; margin: 0 auto 20px auto;
+            aspect-ratio: 1 / 1; width: 100%; max-width: 350px;
+        }
+        .cell { background-color: #1a1a1a; cursor: crosshair; transition: background-color 0.05s linear; }
+        
+        .value-selector { display: flex; gap: 15px; background-color: #1a1a1a; padding: 10px 20px; border-radius: 20px; width: fit-content; margin: 0 auto; }
+        .radio-label { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; color: #aaa; transition: color 0.2s; }
+        .radio-label:hover, .radio-label.active { color: #fff; }
+        .radio-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot-low { background-color: #4a5568; }
+        .dot-med { background-color: #3182ce; }
+        .dot-high { background-color: #e2e8f0; }
+
+        .dashboard { display: flex; justify-content: space-around; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 20px 0; margin-bottom: 30px; width: 100%; }
+        .dash-item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .dash-label { font-size: 14px; color: #ccc; }
+        .dash-value { font-family: monospace; font-size: 16px; color: #fff;}
+
+        .controls { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "play step" "reset reset"; gap: 15px; align-items: center; width: 100%; }
+        .play-group { grid-area: play; display: flex; align-items: center; gap: 15px; }
+        .play-label { font-size: 16px; color: #ccc; }
+        .btn-play { width: 44px; height: 44px; border-radius: 50%; border: none; background-color: white; color: black; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.1s, background-color 0.2s; }
+        .btn-play:active { transform: scale(0.95); }
+        .btn-pill { border: none; border-radius: 24px; background-color: #222; color: white; padding: 14px 24px; font-size: 14px; cursor: pointer; transition: background-color 0.2s; }
+        .btn-pill:hover { background-color: #333; }
+        .btn-pill:active { background-color: #111; }
+        .btn-step { grid-area: step; }
+        .btn-reset { grid-area: reset; width: 100%; }
+
+        .sim-wrapper svg { width: 16px; height: 16px; fill: currentColor; }
+
+        /* --- GITHUB BUTTON --- */
+        .github-link {
+            display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+            margin-top: 30px; padding: 15px 30px; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2); color: #fff; font-family: 'Space Grotesk', sans-serif;
+            text-decoration: none; border-radius: 8px; font-weight: 600; width: 100%;
+            transition: all 0.3s; box-sizing: border-box;
+        }
+        .github-link:hover {
+            background: #fff; color: #000; border-color: #fff;
+        }
+        .github-link svg { width: 20px; height: 20px; fill: currentColor; }
+
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+
+    <nav>
+        <a href="index.html" class="logo">VoidX <span>Initiative</span></a>
+        <a href="laplacian.html" class="back-link">← Back to Reading Module</a>
+    </nav>
+
+    <div class="container">
+        <h1>Laplacian Smoothing</h1>
+        <div class="subtitle">Media & Interactive Simulations</div>
+
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="switchTab('video')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                Visual Intuition (Video)
+            </button>
+            <button class="tab-btn" onclick="switchTab('sim')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                Interactive Engine
+            </button>
+        </div>
+
+        <div id="video" class="tab-content active">
+            <div class="video-wrapper">
+                <iframe 
+                    src="https://www.youtube.com/embed/EW08rD-GFh0" 
+                    title="Laplacian Intuition - Khan Academy" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+            <p style="text-align: center; margin-top: 20px; color: var(--text-muted);">An excellent breakdown by Khan Academy visualizing the Laplacian as fluid flow and slope steepness.</p>
+        </div>
+
+        <div id="sim" class="tab-content">
+            <div class="sim-wrapper">
+                <h2 style="text-align: center; margin: 0 0 5px 0; font-size: 1.5rem; color: #fff;">Laplacian Smoothing Simulator</h2>
+                <div style="text-align: center; font-size: 0.8rem; letter-spacing: 1px; color: #888; margin-bottom: 30px;">CLICK GRID TO ADD PEAKS</div>
+
+                <div class="sim-layout">
+                    <div class="sim-left">
+                        <div id="grid"></div>
+                        
+                        <div class="value-selector">
+                            <div class="radio-label" onclick="setDrawValue(25, this)">
+                                <div class="radio-dot dot-low"></div> Low Value
+                            </div>
+                            <div class="radio-label" onclick="setDrawValue(60, this)">
+                                <div class="radio-dot dot-med"></div> Medium
+                            </div>
+                            <div class="radio-label active" onclick="setDrawValue(100, this)">
+                                <div class="radio-dot dot-high"></div> High Value
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sim-right">
+                        <div class="dashboard">
+                            <div class="dash-item">
+                                <div class="dash-label">Smoothing Status</div>
+                                <div class="dash-value" id="statusDisplay">Idle</div>
+                            </div>
+                            <div class="dash-item">
+                                <div class="dash-label">Current Iteration</div>
+                                <div class="dash-value" id="iterationDisplay">0</div>
+                            </div>
+                        </div>
+
+                        <div class="controls">
+                            <div class="play-group">
+                                <span class="play-label">Smoothing</span>
+                                <button class="btn-play" id="playBtn" onclick="togglePlay()">
+                                    <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                    <svg id="icon-pause" viewBox="0 0 24 24" style="display: none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                </button>
+                            </div>
+                            
+                            <button class="btn-pill btn-step" onclick="stepSimulation()">Apply Step</button>
+                            <button class="btn-pill btn-reset" onclick="resetGrid()">Reset Grid</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="https://github.com/KRISH9621/Website_" target="_blank" class="github-link">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
+                Access the code of this simulation
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            // Remove active class from all buttons and content
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked button and target content
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+    </script>
+
+    <script>
+        const ROWS = 20; const COLS = 20;
+        let grid = []; let isPlaying = false; let playInterval;
+        let isDrawing = false; let currentDrawValue = 100; let iterationCount = 0;
+
+        const gridElement = document.getElementById('grid');
+        const statusDisplay = document.getElementById('statusDisplay');
+        const iterationDisplay = document.getElementById('iterationDisplay');
+        const iconPlay = document.getElementById('icon-play');
+        const iconPause = document.getElementById('icon-pause');
+
+        function initGrid() {
+            grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            iterationCount = 0;
+            updateDashboard();
+            renderGrid();
+        }
+
+        function setDrawValue(val, element) {
+            currentDrawValue = val;
+            document.querySelectorAll('.radio-label').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        function getColor(value) {
+            if (value <= 0) return '#1a1a1a';
+            let val = Math.max(0, Math.min(100, value));
+            let r, g, b;
+            if (val <= 50) {
+                let pct = val / 50;
+                r = Math.floor(26 + pct * (49 - 26));
+                g = Math.floor(26 + pct * (130 - 26));
+                b = Math.floor(26 + pct * (206 - 26));
+            } else {
+                let pct = (val - 50) / 50;
+                r = Math.floor(49 + pct * (255 - 49));
+                g = Math.floor(130 + pct * (255 - 130));
+                b = Math.floor(206 + pct * (255 - 206));
+            }
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function renderGrid() {
+            gridElement.innerHTML = '';
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    let cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.style.backgroundColor = getColor(grid[r][c]);
+                    cell.onmousedown = (e) => { e.preventDefault(); isDrawing = true; applyDraw(r, c); };
+                    cell.onmouseenter = () => { if (isDrawing) applyDraw(r, c); };
+                    cell.onmouseup = () => { isDrawing = false; };
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        document.addEventListener('mouseup', () => { isDrawing = false; });
+
+        function applyDraw(r, c) { grid[r][c] = Math.min(100, grid[r][c] + currentDrawValue); renderGrid(); }
+
+        function resetGrid() { if (isPlaying) togglePlay(); initGrid(); }
+
+        function updateDashboard() {
+            iterationDisplay.innerText = iterationCount;
+            statusDisplay.innerText = isPlaying ? "Active" : "Idle";
+            statusDisplay.style.color = isPlaying ? "#4ade80" : "#ccc";
+        }
+
+        function stepSimulation() {
+            let nextGrid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            let isCompletelyFlat = true;
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    let sum = 0; let neighbors = 0;
+                    if (r > 0) { sum += grid[r-1][c]; neighbors++; }
+                    if (r < ROWS - 1) { sum += grid[r+1][c]; neighbors++; }
+                    if (c > 0) { sum += grid[r][c-1]; neighbors++; }
+                    if (c < COLS - 1) { sum += grid[r][c+1]; neighbors++; }
+
+                    let average = sum / neighbors;
+                    let laplacian = average - grid[r][c];
+                    
+                    nextGrid[r][c] = grid[r][c] + (laplacian * 0.4);
+                    if (nextGrid[r][c] > 0.5) isCompletelyFlat = false;
+                }
+            }
+            grid = nextGrid; iterationCount++; updateDashboard(); renderGrid();
+            if (isCompletelyFlat && isPlaying) { togglePlay(); }
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            updateDashboard();
+            if (isPlaying) {
+                iconPlay.style.display = 'none'; iconPause.style.display = 'block';
+                playInterval = setInterval(stepSimulation, 25);
+            } else {
+                iconPlay.style.display = 'block'; iconPause.style.display = 'none';
+                clearInterval(playInterval);
+            }
+        }
+
+        initGrid();
+    </script>
+</body>
+</html>

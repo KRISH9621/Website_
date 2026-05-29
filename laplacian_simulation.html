@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laplacian Smoothing Simulator</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #0a0a0a;
+            color: #ffffff;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            background: #0a0a0a;
+            padding: 30px;
+            width: 100%;
+            max-width: 600px;
+        }
+        h2 {
+            font-weight: 500;
+            margin-top: 0;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            color: #aaa;
+        }
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(20, 1fr);
+            gap: 1px;
+            background-color: #333;
+            border: 1px solid #333;
+            margin: 0 auto 20px auto;
+            aspect-ratio: 1 / 1;
+            width: 100%;
+            max-width: 400px;
+        }
+        .cell {
+            background-color: #1a1a1a;
+            cursor: crosshair;
+            transition: background-color 0.05s linear;
+        }
+        
+        /* Value Selector */
+        .value-selector {
+            display: flex;
+            gap: 15px;
+            background-color: #1a1a1a;
+            padding: 10px 20px;
+            border-radius: 20px;
+            width: fit-content;
+            margin-bottom: 30px;
+        }
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #aaa;
+            transition: color 0.2s;
+        }
+        .radio-label:hover, .radio-label.active {
+            color: #fff;
+        }
+        .radio-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .dot-low { background-color: #4a5568; }
+        .dot-med { background-color: #3182ce; }
+        .dot-high { background-color: #e2e8f0; }
+
+        /* Dashboard */
+        .dashboard {
+            display: flex;
+            justify-content: space-around;
+            border-top: 1px solid #333;
+            border-bottom: 1px solid #333;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        .dash-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .dash-label {
+            font-size: 14px;
+            color: #ccc;
+        }
+        .dash-value {
+            font-family: monospace;
+            font-size: 16px;
+        }
+
+        /* Controls */
+        .controls {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            grid-template-areas: 
+                "play step"
+                "reset reset";
+            gap: 15px;
+            align-items: center;
+        }
+        .play-group {
+            grid-area: play;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .play-label {
+            font-size: 16px;
+            color: #ccc;
+        }
+        .btn-play {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background-color: white;
+            color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        .btn-play:active {
+            transform: scale(0.95);
+        }
+        .btn-pill {
+            border: none;
+            border-radius: 24px;
+            background-color: #222;
+            color: white;
+            padding: 14px 24px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-pill:hover {
+            background-color: #333;
+        }
+        .btn-pill:active {
+            background-color: #111;
+        }
+        .btn-step {
+            grid-area: step;
+        }
+        .btn-reset {
+            grid-area: reset;
+            width: 100%;
+        }
+
+        /* SVG Icons */
+        svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Laplacian Smoothing Simulator</h2>
+    
+    <div class="subtitle">Click grid to add peaks</div>
+
+    <div id="grid"></div>
+    
+    <div class="value-selector">
+        <div class="radio-label" onclick="setDrawValue(25, this)">
+            <div class="radio-dot dot-low"></div> Low Value
+        </div>
+        <div class="radio-label" onclick="setDrawValue(60, this)">
+            <div class="radio-dot dot-med"></div> Medium
+        </div>
+        <div class="radio-label active" onclick="setDrawValue(100, this)">
+            <div class="radio-dot dot-high"></div> High Value
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <div class="dash-item">
+            <div class="dash-label">Smoothing Status</div>
+            <div class="dash-value" id="statusDisplay">Idle</div>
+        </div>
+        <div class="dash-item">
+            <div class="dash-label">Current Iteration</div>
+            <div class="dash-value" id="iterationDisplay">0</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="play-group">
+            <span class="play-label">Smoothing</span>
+            <button class="btn-play" id="playBtn" onclick="togglePlay()">
+                <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg id="icon-pause" viewBox="0 0 24 24" style="display: none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </button>
+        </div>
+        
+        <button class="btn-pill btn-step" onclick="stepSimulation()">Apply Step</button>
+        <button class="btn-pill btn-reset" onclick="resetGrid()">Reset</button>
+    </div>
+</div>
+
+<script>
+    const ROWS = 20;
+    const COLS = 20;
+    let grid = [];
+    let isPlaying = false;
+    let playInterval;
+    let isDrawing = false;
+    let currentDrawValue = 100;
+    let iterationCount = 0;
+
+    const gridElement = document.getElementById('grid');
+    const statusDisplay = document.getElementById('statusDisplay');
+    const iterationDisplay = document.getElementById('iterationDisplay');
+    const iconPlay = document.getElementById('icon-play');
+    const iconPause = document.getElementById('icon-pause');
+
+    // Initialize the grid with 0s
+    function initGrid() {
+        grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        iterationCount = 0;
+        updateDashboard();
+        renderGrid();
+    }
+
+    // Set the drawing intensity (Low, Med, High)
+    function setDrawValue(val, element) {
+        currentDrawValue = val;
+        // Update active class for styling
+        document.querySelectorAll('.radio-label').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+    }
+
+    // Dark theme color mapping (Black -> Blue -> White)
+    function getColor(value) {
+        if (value <= 0) return '#1a1a1a'; // Base grid color
+        
+        // Clamp value
+        let val = Math.max(0, Math.min(100, value));
+        let r, g, b;
+
+        if (val <= 50) {
+            // Dark grey (#1a1a1a) to Blue (#3182ce)
+            let pct = val / 50;
+            r = Math.floor(26 + pct * (49 - 26));
+            g = Math.floor(26 + pct * (130 - 26));
+            b = Math.floor(26 + pct * (206 - 26));
+        } else {
+            // Blue (#3182ce) to White (#ffffff)
+            let pct = (val - 50) / 50;
+            r = Math.floor(49 + pct * (255 - 49));
+            g = Math.floor(130 + pct * (255 - 130));
+            b = Math.floor(206 + pct * (255 - 206));
+        }
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    // Build the visual DOM elements
+    function renderGrid() {
+        gridElement.innerHTML = '';
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                let cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.style.backgroundColor = getColor(grid[r][c]);
+                
+                // Interaction to create spikes
+                cell.onmousedown = (e) => { e.preventDefault(); isDrawing = true; applyDraw(r, c); };
+                cell.onmouseenter = () => { if (isDrawing) applyDraw(r, c); };
+                cell.onmouseup = () => { isDrawing = false; };
+                
+                gridElement.appendChild(cell);
+            }
+        }
+    }
+
+    document.addEventListener('mouseup', () => { isDrawing = false; });
+
+    function applyDraw(r, c) {
+        // Add value instead of just overriding, feels more like building a peak
+        grid[r][c] = Math.min(100, grid[r][c] + currentDrawValue);
+        renderGrid();
+    }
+
+    function resetGrid() {
+        if (isPlaying) togglePlay();
+        initGrid();
+    }
+
+    function updateDashboard() {
+        iterationDisplay.innerText = iterationCount;
+        statusDisplay.innerText = isPlaying ? "Active" : "Idle";
+        statusDisplay.style.color = isPlaying ? "#4ade80" : "#ccc";
+    }
+
+    // The Core Math: Apply Discrete Laplacian
+    function stepSimulation() {
+        let nextGrid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        let isCompletelyFlat = true;
+
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                let sum = 0;
+                let neighbors = 0;
+
+                // Check Top, Bottom, Left, Right
+                if (r > 0) { sum += grid[r-1][c]; neighbors++; }
+                if (r < ROWS - 1) { sum += grid[r+1][c]; neighbors++; }
+                if (c > 0) { sum += grid[r][c-1]; neighbors++; }
+                if (c < COLS - 1) { sum += grid[r][c+1]; neighbors++; }
+
+                let average = sum / neighbors;
+                let laplacian = average - grid[r][c];
+                
+                // Diffusion rate
+                nextGrid[r][c] = grid[r][c] + (laplacian * 0.4);
+
+                // Stop playing if the grid is mostly flat
+                if (nextGrid[r][c] > 0.5) isCompletelyFlat = false;
+            }
+        }
+
+        grid = nextGrid;
+        iterationCount++;
+        updateDashboard();
+        renderGrid();
+
+        if (isCompletelyFlat && isPlaying) {
+            togglePlay(); // Auto-stop when smoothed out
+        }
+    }
+
+    function togglePlay() {
+        isPlaying = !isPlaying;
+        updateDashboard();
+        
+        if (isPlaying) {
+            iconPlay.style.display = 'none';
+            iconPause.style.display = 'block';
+            playInterval = setInterval(stepSimulation, 50);
+        } else {
+            iconPlay.style.display = 'block';
+            iconPause.style.display = 'none';
+            clearInterval(playInterval);
+        }
+    }
+
+    // Run setup on load
+    initGrid();
+</script>
+
+</body>
+</html>

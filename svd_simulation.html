@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVD Interactive Visualizer</title>
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { margin-top: 0; font-size: 1.5rem; color: #fff; }
+        .container {
+            display: flex;
+            gap: 30px;
+            max-width: 1000px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .controls {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            min-width: 250px;
+        }
+        .matrix-input {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="number"] {
+            width: 100%;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        input[type="number"]:focus { outline: none; border-color: #4da6ff; }
+        .slider-container { margin-bottom: 20px; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        
+        .matrices-output {
+            margin-top: 20px;
+            font-family: monospace;
+            background: #000;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .matrix-row { margin-bottom: 10px; }
+        .matrix-title { color: #888; margin-bottom: 5px; font-size: 0.9rem;}
+        
+        canvas {
+            background: #121212;
+            border-radius: 12px;
+            border: 1px solid #333;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .step-indicator {
+            text-align: center;
+            font-weight: bold;
+            color: #4da6ff;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Singular Value Decomposition (SVD)</h1>
+
+    <div class="container">
+        <div class="controls">
+            <div class="matrix-title">Transformation Matrix (A)</div>
+            <div class="matrix-input">
+                <input type="number" id="m_a" value="1" step="0.1">
+                <input type="number" id="m_b" value="1" step="0.1">
+                <input type="number" id="m_c" value="0" step="0.1">
+                <input type="number" id="m_d" value="2" step="0.1">
+            </div>
+
+            <div class="slider-container">
+                <div class="matrix-title">Transformation Phase (t)</div>
+                <input type="range" id="t_slider" min="0" max="3" step="0.01" value="0">
+                <div class="step-indicator" id="step_text">Original State</div>
+            </div>
+
+            <div class="matrices-output" id="output">
+                <!-- Computed matrices will appear here -->
+            </div>
+        </div>
+
+        <div>
+            <canvas id="canvas" width="500" height="500"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        const SCALE = 60; // Pixels per unit
+
+        // Input elements
+        const inputs = ['m_a', 'm_b', 'm_c', 'm_d'].map(id => document.getElementById(id));
+        const slider = document.getElementById('t_slider');
+        const stepText = document.getElementById('step_text');
+        const outputDiv = document.getElementById('output');
+
+        // Event Listeners
+        inputs.forEach(input => input.addEventListener('input', draw));
+        slider.addEventListener('input', draw);
+
+        // Helper: Format matrix for display
+        function formatMatrix(name, m, isDiagonal = false) {
+            if (isDiagonal) {
+                return `<div class="matrix-row"><span style="color:#4da6ff">${name}</span> = <br>[${m[0].toFixed(2)}, 0.00]<br>[0.00, ${m[1].toFixed(2)}]</div>`;
+            }
+            return `<div class="matrix-row"><span style="color:#4da6ff">${name}</span> = <br>[${m[0][0].toFixed(2)}, ${m[0][1].toFixed(2)}]<br>[${m[1][0].toFixed(2)}, ${m[1][1].toFixed(2)}]</div>`;
+        }
+
+        // Compute exact 2x2 SVD using Eigen-decomposition of A^T A
+        function computeSVD(a, b, c, d) {
+            const E = a * a + c * c;
+            const F = a * b + c * d;
+            const G = b * b + d * d;
+
+            const T = E + G;
+            const D = E * G - F * F;
+            const diff = Math.sqrt(Math.max(0, T * T - 4 * D));
+
+            let l1 = (T + diff) / 2;
+            let l2 = (T - diff) / 2;
+
+            let s1 = Math.sqrt(Math.max(0, l1));
+            let s2 = Math.sqrt(Math.max(0, l2));
+
+            let v1x, v1y, v2x, v2y;
+            if (Math.abs(F) < 1e-9) {
+                v1x = 1; v1y = 0;
+                v2x = 0; v2y = 1;
+            } else {
+                v1x = F;
+                v1y = l1 - E;
+                let mag = Math.sqrt(v1x * v1x + v1y * v1y);
+                v1x /= mag;
+                v1y /= mag;
+                v2x = -v1y;
+                v2y = v1x;
+            }
+
+            let u1x, u1y, u2x, u2y;
+            if (s1 > 1e-9) {
+                u1x = (a * v1x + b * v1y) / s1;
+                u1y = (c * v1x + d * v1y) / s1;
+            } else {
+                u1x = 1; u1y = 0;
+            }
+
+            if (s2 > 1e-9) {
+                u2x = (a * v2x + b * v2y) / s2;
+                u2y = (c * v2x + d * v2y) / s2;
+            } else {
+                u2x = -u1y; u2y = u1x;
+            }
+
+            return {
+                U: [[u1x, u2x], [u1y, u2y]],
+                S: [s1, s2],
+                V: [[v1x, v2x], [v1y, v2y]] // Note: This is V, not V^T
+            };
+        }
+
+        // Apply interpolated transformations based on time `t` (0 to 3)
+        function transformPoint(p, t, svd) {
+            let p0 = { x: p.x, y: p.y };
+            
+            // Phase 1: Apply V^T (Transpose of V)
+            let p1 = {
+                x: svd.V[0][0] * p0.x + svd.V[1][0] * p0.y,
+                y: svd.V[0][1] * p0.x + svd.V[1][1] * p0.y
+            };
+            
+            // Phase 2: Apply Sigma
+            let p2 = {
+                x: svd.S[0] * p1.x,
+                y: svd.S[1] * p1.y
+            };
+            
+            // Phase 3: Apply U
+            let p3 = {
+                x: svd.U[0][0] * p2.x + svd.U[0][1] * p2.y,
+                y: svd.U[1][0] * p2.x + svd.U[1][1] * p2.y
+            };
+
+            // Linear interpolation between the phases for smooth animation
+            if (t <= 1) {
+                return { x: p0.x + (p1.x - p0.x) * t, y: p0.y + (p1.y - p0.y) * t };
+            } else if (t <= 2) {
+                let dt = t - 1;
+                return { x: p1.x + (p2.x - p1.x) * dt, y: p1.y + (p2.y - p1.y) * dt };
+            } else {
+                let dt = t - 2;
+                return { x: p2.x + (p3.x - p2.x) * dt, y: p2.y + (p3.y - p2.y) * dt };
+            }
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let x = 0; x <= width; x += SCALE) {
+                ctx.moveTo(x, 0); ctx.lineTo(x, height);
+            }
+            for (let y = 0; y <= height; y += SCALE) {
+                ctx.moveTo(0, y); ctx.lineTo(width, y);
+            }
+            ctx.stroke();
+
+            // Axes
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height);
+            ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2);
+            ctx.stroke();
+        }
+
+        function drawVector(p, color, label) {
+            const screenX = width / 2 + p.x * SCALE;
+            const screenY = height / 2 - p.y * SCALE; // Flip Y for standard Cartesian
+
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 3;
+
+            ctx.beginPath();
+            ctx.moveTo(width / 2, height / 2);
+            ctx.lineTo(screenX, screenY);
+            ctx.stroke();
+
+            // Arrowhead
+            const angle = Math.atan2(-p.y, p.x);
+            ctx.beginPath();
+            ctx.moveTo(screenX, screenY);
+            ctx.lineTo(screenX - 10 * Math.cos(angle - Math.PI / 6), screenY - 10 * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(screenX - 10 * Math.cos(angle + Math.PI / 6), screenY - 10 * Math.sin(angle + Math.PI / 6));
+            ctx.fill();
+        }
+
+        function draw() {
+            const a = parseFloat(inputs[0].value) || 0;
+            const b = parseFloat(inputs[1].value) || 0;
+            const c = parseFloat(inputs[2].value) || 0;
+            const d = parseFloat(inputs[3].value) || 0;
+            const t = parseFloat(slider.value);
+
+            // Update Labels
+            if (t === 0) stepText.innerText = "Original State (Identity)";
+            else if (t <= 1) stepText.innerText = `Step 1: First Rotation (V^T) [${Math.round(t*100)}%]`;
+            else if (t <= 2) stepText.innerText = `Step 2: Stretch (Sigma) [${Math.round((t-1)*100)}%]`;
+            else if (t < 3) stepText.innerText = `Step 3: Final Rotation (U) [${Math.round((t-2)*100)}%]`;
+            else stepText.innerText = "Final State (A = U * Sigma * V^T)";
+
+            const svd = computeSVD(a, b, c, d);
+
+            // Print Matrices
+            outputDiv.innerHTML = 
+                formatMatrix("U", svd.U) +
+                formatMatrix("&Sigma; (Sigma)", svd.S, true) +
+                formatMatrix("V^T", [[svd.V[0][0], svd.V[1][0]], [svd.V[0][1], svd.V[1][1]]]);
+
+            // Clear Canvas
+            ctx.clearRect(0, 0, width, height);
+            drawGrid();
+
+            // Draw transformed unit circle
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i <= 100; i++) {
+                const angle = (i / 100) * 2 * Math.PI;
+                const p = { x: Math.cos(angle), y: Math.sin(angle) };
+                const tP = transformPoint(p, t, svd);
+                
+                const screenX = width / 2 + tP.x * SCALE;
+                const screenY = height / 2 - tP.y * SCALE;
+
+                if (i === 0) ctx.moveTo(screenX, screenY);
+                else ctx.lineTo(screenX, screenY);
+            }
+            ctx.stroke();
+
+            // Draw Base Vectors
+            let v_i = transformPoint({ x: 1, y: 0 }, t, svd);
+            let v_j = transformPoint({ x: 0, y: 1 }, t, svd);
+            drawVector(v_i, '#ff4d4d', 'i'); // Red for i
+            drawVector(v_j, '#4dff4d', 'j'); // Green for j
+        }
+
+        // Initialize
+        draw();
+    </script>
+</body>
+</html>

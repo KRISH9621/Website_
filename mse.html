@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoidX Initiative | Mean Squared Error</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --brand-accent: #00f0ff;
+            --brand-dark: #020617;
+            --surface-color: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body, html { margin: 0; padding: 0; background-color: var(--brand-dark); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-x: hidden; line-height: 1.8; }
+        .grid-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -10; background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 50px 50px; }
+        nav { padding: 30px 5vw; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; letter-spacing: 2px; text-decoration: none; }
+        .logo span { color: var(--brand-accent); }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+        .back-link:hover { color: var(--brand-accent); }
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 5vw; }
+
+        h1 { font-family: 'Space Grotesk', sans-serif; font-size: 3.5rem; font-weight: 700; margin: 0 0 20px 0; line-height: 1.1; letter-spacing: -1px; }
+        h2 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: var(--brand-accent); margin-top: 60px; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 10px; }
+        h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; color: #fff; margin-top: 40px; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 10px;}
+        h5 { font-family: 'Space Grotesk', sans-serif; font-size: 2.3rem; color: #f4a920; margin-top: 30px; margin-bottom: 20px;}
+        p, li { font-size: 1.15rem; color: var(--text-muted); margin-bottom: 25px; }
+        strong { color: #fff; }
+        .mjx-chtml { color: #f0ae9de2 !important; margin: 20px 0; }
+
+        .author-byline { display: flex; align-items: center; gap: 15px; margin-top: -10px; margin-bottom: 50px; padding-bottom: 30px; border-bottom: 1px solid rgba(0, 240, 255, 0.1); }
+        .author-avatar { width: 50px; height: 50px; border-radius: 50%; background-color: #1e293b; border: 2px solid rgba(0, 240, 255, 0.3); object-fit: cover; }
+        .author-info { display: flex; flex-direction: column; }
+        .author-name { color: #fff; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.1rem; text-decoration: none; transition: color 0.3s; }
+        .author-name:hover { color: var(--brand-accent); }
+        .author-meta { color: var(--text-muted); font-size: 0.85rem; letter-spacing: 0.5px; }
+
+        /* --- DICTIONARY GRID --- */
+        .dictionary-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 30px; }
+        .dict-card { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; display: flex; gap: 20px; align-items: center;}
+        .dict-math { font-size: 1.5rem; color: var(--brand-accent); min-width: 60px; text-align: center; font-weight: bold;}
+        .dict-text h4 { margin: 0 0 5px 0; font-size: 1.1rem; color: #fff; border: none; padding: 0;}
+        .dict-text p { margin: 0; font-size: 0.95rem; line-height: 1.5; }
+
+        /* --- SIMULATION STYLES --- */
+        .sim-wrapper { 
+            background: #0a0a0a; padding: 30px; border-radius: 12px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05); 
+            border: 1px solid rgba(0, 240, 255, 0.2); display: flex; flex-direction: column; 
+            align-items: center; margin: 40px 0; 
+        }
+        
+        #mse-display { font-size: 2.2rem; font-weight: bold; color: var(--brand-accent); margin-bottom: 5px; text-shadow: 0 0 15px rgba(0, 240, 255, 0.4); font-variant-numeric: tabular-nums; font-family: 'Space Grotesk', sans-serif; }
+        #formula-display { font-size: 1.1rem; color: #ffffff; margin-bottom: 15px; font-family: monospace; background: #000; padding: 8px 15px; border-radius: 6px; border: 1px solid #333; }
+
+        canvas#mseCanvas { 
+            background-color: #050505; border: 1px solid #333333; border-radius: 8px; 
+            box-shadow: 0 8px 32px rgba(0, 240, 255, 0.1); margin-bottom: 20px; 
+            cursor: crosshair; width: 100%; max-width: 800px; 
+            height: auto; max-height: 45vh; /* Prevents canvas from taking up too much vertical space */
+        }
+
+        .sim-controls { display: flex; gap: 15px; background-color: #020617; padding: 15px 25px; border-radius: 12px; border: 1px solid #333333; align-items: center; flex-wrap: wrap; justify-content: center; width: 100%; box-sizing: border-box; }
+        .slider-container { display: flex; flex-direction: column; align-items: center; min-width: 200px; flex: 1; }
+        .slider-container label { margin-bottom: 8px; font-size: 1rem; color: #cccccc; font-family: 'Inter', sans-serif; }
+        .slider-container span { color: #ffffff; font-weight: bold; font-family: monospace; font-size: 1.1rem; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--brand-accent); }
+
+        button.sim-btn { background-color: #222222; color: var(--brand-accent); border: 1px solid var(--brand-accent); padding: 10px 20px; font-size: 1rem; font-weight: bold; font-family: 'Space Grotesk'; border-radius: 6px; cursor: pointer; transition: all 0.2s; margin-top: 5px; }
+        button.sim-btn:hover { background-color: var(--brand-accent); color: #000000; box-shadow: 0 4px 12px rgba(0, 240, 255, 0.4); }
+
+        /* --- VIDEO EMBED STYLES --- */
+        .reference-section { margin: 60px 0; padding: 30px; background: rgba(0, 240, 255, 0.02); border-radius: 12px; border: 1px solid rgba(0, 240, 255, 0.1); }
+        .reference-section h3 { margin-top: 0; }
+        .video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 20px; }
+        .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        footer { padding: 50px 5vw; text-align: center; color: var(--text-muted); font-size: 0.95rem; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 80px; background: rgba(2, 6, 23, 0.8); }
+        footer a { color: var(--brand-accent); text-decoration: none; font-weight: 600; transition: 0.3s; }
+        footer a:hover { text-shadow: 0 0 10px rgba(0, 240, 255, 0.5); }
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+
+    <nav>
+        <a href="index.html" class="logo">VoidX <span>Initiative</span></a>
+        <a href="index.html" class="back-link">← Back to Hub</a>
+    </nav>
+
+    <div class="container">
+        <h1>MEAN SQUARED ERROR ~The Objective Function</h1>
+        
+        <div class="author-byline">
+            <img src="your-profile-pic.jpg" alt="Krishnanand" class="author-avatar" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%2394a3b8\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'">
+            <div class="author-info">
+                <a href="about_me.html" class="author-name">By Krishnanand</a>
+                <span class="author-meta">Lead Architect, VoidX Initiative</span>
+            </div>
+        </div>
+
+        <h5>Hey learner!</h5>
+        <p>If you are training an AI model, simulating a system, or just trying to draw a line of best fit through some data, MSE is one of the most common ways to measure how "wrong" your model is. Here is the concept broken down into simple words, going in reverse order:</p>
+
+        <h3>1. Error (The Mistake)</h3>
+        <p>Imagine you are throwing darts at a board. The bullseye is the <strong>actual</strong> true value, and where your dart lands is your <strong>prediction</strong>. The <strong>Error</strong> is simply the distance between your dart and the bullseye. <br><em>Math term: $$Actual\ Value - Predicted\ Value$$</em></p>
+        
+        <img src="mse.png" alt="Dartboard analogy representing MSE actual vs predicted values" class="example-image">
+        
+        
+        <h3>2. Squared (The Punishment)</h3>
+        <p>If we just added up all the errors, a prediction that was too high (+5) and a prediction that was too low (-5) would cancel each other out to zero, making it look like your model is perfect when it isn't. To fix this, we <strong>Square</strong> the error (multiply it by itself). This does two very important things:</p>
+        <ul>
+            <li><strong>It makes everything positive:</strong> A -5 mistake becomes 25, and a +5 mistake also becomes 25. Nothing cancels out.</li>
+            <li><strong>It punishes big mistakes:</strong> A small error of 2 becomes 4. But a large error of 10 blows up to 100. This teaches the model that being <em>a little bit wrong a lot of times</em> is better than being <em>massively wrong even once</em>.</li>
+        </ul>
+
+        <h3>3. Mean (The Average)</h3>
+        <p>Finally, you don't just throw one dart; you throw hundreds or thousands (your entire dataset). The <strong>Mean</strong> just means we add up all those Squared Errors and divide by the total number of darts thrown. This gives you a single number—the average punishment your model gets for being wrong.</p>
+
+        <h2>The Goal in AI</h2>
+        <p>When you hear about an AI model "training" or minimizing its "loss function," it often just means the computer is adjusting its internal math over and over again, trying to make that final MSE number as close to zero as possible.</p>
+        <p>To really see how this works, try adjusting the line of best fit in this interactive tool to get the lowest possible Mean Squared Error:</p>
+
+        <div class="sim-wrapper">
+            <h2 style="font-family: 'Space Grotesk'; font-size: 1.6rem; margin-top: 0; color: #fff;">Interactive MSE Sandbox</h2>
+            <p style="color: #aaa; margin-bottom: 20px; font-size: 0.95rem;">Drag the white points or adjust the sliders to see how the penalty squares visually expand.</p>
+            
+            <div id="mse-display">MSE: 0.000</div>
+            <div id="formula-display">y = -0.30x + -2.00</div>
+
+            <canvas id="mseCanvas" width="800" height="400"></canvas>
+
+            <div class="sim-controls">
+                <div class="slider-container">
+                    <label for="slope">Slope (m): <span id="slope-val">-0.30</span></label>
+                    <input type="range" id="slope" min="-2" max="3" step="0.01" value="-0.3">
+                </div>
+                <div class="slider-container">
+                    <label for="intercept">Y-Intercept (b): <span id="intercept-val">-2.00</span></label>
+                    <input type="range" id="intercept" min="-5" max="10" step="0.01" value="-2">
+                </div>
+                <button class="sim-btn" onclick="autoFit()">Auto-Fit (Least Squares)</button>
+            </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 60px 0;">
+
+        <h2>1. The Formal Mathematical Equation</h2>
+        <p>Let's dive deep into the mathematical engine room of Mean Squared Error. When you move past the "dartboard" analogy, MSE becomes a beautifully elegant piece of statistics and calculus. In mathematical notation, the Mean Squared Error is defined as:</p>
+        
+        $$MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2$$
+
+        <p>Where:</p>
+        <div class="dictionary-grid">
+            <div class="dict-card"><div class="dict-math">$$n$$</div><div class="dict-text"><h4>Total Samples</h4><p>The total number of data points (samples) in your dataset.</p></div></div>
+            <div class="dict-card"><div class="dict-math">$$\sum_{i=1}^{n}$$</div><div class="dict-text"><h4>The Summation</h4><p>Sigma. It means "add up the following expression for every data point from the 1st (i=1) to the last (n)".</p></div></div>
+            <div class="dict-card"><div class="dict-math">$$y_i$$</div><div class="dict-text"><h4>Actual Value</h4><p>The true value of the i-th data point.</p></div></div>
+            <div class="dict-card"><div class="dict-math">$$\hat{y}_i$$</div><div class="dict-text"><h4>Predicted Value</h4><p>The predicted value for the i-th data point (pronounced "y-hat").</p></div></div>
+        </div>
+
+        <h2>2. The Deep Theory: Why do we Square it? (The Gaussian Connection)</h2>
+        <p>You might wonder: <em>Why square it? Why not just take the absolute value (which is called Mean Absolute Error, or MAE)?</em></p>
+        <p>The answer lies in a foundational statistical concept called <strong>Maximum Likelihood Estimation (MLE)</strong>. Imagine you are trying to predict a value, but the real-world data is noisy. In nature, random noise or errors tend to follow a <strong>Normal Distribution</strong> (a Bell Curve), also known as Gaussian noise.</p>
+        <p>If you make the mathematical assumption that the errors in your data are normally distributed, and you ask the question, <em>"What mathematical line is most likely to have generated this specific set of noisy data?"</em>, you have to maximize the Gaussian probability function:</p>
+        
+        $$P(\text{data} \mid \text{model}) = \prod_{i=1}^{n} \frac{1}{\sqrt{2\pi\sigma^2}} e^{-\frac{(y_i - \hat{y}_i)^2}{2\sigma^2}}$$
+
+        <p>To find the maximum of this complex probability function, mathematicians take the natural logarithm of it (because maximizing a logarithm is easier and yields the exact same peak). When you take the log, the complex exponential equation simplifies drastically. The constants drop away, the negative sign flips the problem from "maximizing" to "minimizing," and you are left with exactly one core term to minimize:</p>
+        
+        $$\sum_{i=1}^{n} (y_i - \hat{y}_i)^2$$
+
+        <p><strong>The Theory Takeaway:</strong> Minimizing the Mean Squared Error is mathematically identical to finding the Maximum Likelihood Estimate under the assumption of Gaussian (normally distributed) noise. You are literally calculating the most mathematically probable truth.</p>
+        <div class="reference-section">
+            <h3 style="border-bottom: none;">Visualizing the Mathematics</h3>
+            <p>To summarize these concepts, Data Scientist Greg Hogg provides an excellent visual breakdown contrasting Mean Squared Error against Mean Absolute Error, explaining exactly why MSE is vital for calculus-based optimization.</p>
+            <div class="video-wrapper">
+                <iframe 
+                    src="https://www.youtube.com/embed/Wk8vycBT4qM" 
+                    title="Error / Loss Functions for Regression" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </div>
+        <h2>3. The Calculus: How AI Uses MSE to Learn</h2>
+        <p>AI models learn using an algorithm called <strong>Gradient Descent</strong>. To use Gradient Descent, the loss function must be differentiable—meaning we need to be able to calculate its slope (derivative) at any point.</p>
+        <p>MSE is a smooth, continuous quadratic function. Because it squares the inputs, it forms a perfectly convex shape (like a physical bowl). This is a dream for calculus because a convex function is guaranteed to have only one absolute lowest point: the Global Minimum.</p>
+        <p>If we have a simple linear regression model where our prediction is :<strong>$$\hat{y}_i = mx_i + b$$</strong> (where m is the weight and b is the bias), we substitute this into the MSE formula:</p>
+        
+        $$MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - (mx_i + b))^2$$
+
+        <p>To figure out how to update the model to make it better, the AI calculates the <strong>partial derivatives</strong> (the gradients) of the MSE with respect to the weight (m) and the bias (b) using the chain rule:</p>
+        
+        <p>With respect to <strong>m</strong>:</p>
+        $$\frac{\partial MSE}{\partial m} = \frac{-2}{n} \sum_{i=1}^{n} x_i(y_i - (mx_i + b))$$
+        
+        <p>With respect to <strong>b</strong>:</p>
+        $$\frac{\partial MSE}{\partial b} = \frac{-2}{n} \sum_{i=1}^{n} (y_i - (mx_i + b))$$
+
+        <p>The AI calculates these two gradients. If the gradient is positive, it means the error is going up, so the AI decreases its weights. If the gradient is negative, the error is going down, so it increases its weights. It takes tiny mathematical steps down the "bowl" until the derivative is exactly 0 —the bottom of the bowl, where the MSE is perfectly minimized.</p>
+
+        <h2>4. The Statistical Decomposition: Bias-Variance Tradeoff</h2>
+        <p>In advanced machine learning theory, the expected MSE of a model on unseen data can actually be broken down into three distinct theoretical components. This is known as the Bias-Variance Decomposition:</p>
+        
+        $$Expected\ MSE = Bias^2 + Variance + Irreducible\ Error$$
+
+        <ul>
+            <li><strong>Bias:</strong> The error introduced by approximating a real-life problem (which may be highly complex) with a simpler model. A model with high bias pays little attention to the training data and oversimplifies (Underfitting).</li>
+            <li><strong>Variance:</strong> The error introduced by the model being too sensitive to tiny fluctuations or noise in the training data. A model with high variance memorizes the training data but fails on new data (Overfitting).</li>
+            <li><strong>Irreducible Error:</strong> The fundamental noise in the universe. No matter how perfect your model is, this error cannot be reduced which is represented by the : $$\sigma^2$$ </li>
+        </ul>
+        <p>At last, When training an AI, measuring the MSE isn't just about getting a low number on the training data; it's about balancing Bias and Variance so the MSE stays low when the AI is released into the real world !</p>
+
+        
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mseCanvas');
+        const ctx = canvas.getContext('2d');
+        const slopeSlider = document.getElementById('slope');
+        const interceptSlider = document.getElementById('intercept');
+        const slopeVal = document.getElementById('slope-val');
+        const interceptVal = document.getElementById('intercept-val');
+        const mseDisplay = document.getElementById('mse-display');
+        const formulaDisplay = document.getElementById('formula-display');
+
+        let points = [
+            {x: 1, y: 2}, {x: 2, y: 3}, {x: 3, y: 5}, {x: 4, y: 4}, {x: 5, y: 6}
+        ];
+
+        const minX = 0, maxX = 8;
+        const minY = -4, maxY = 10;
+        let isDragging = false; let dragIndex = -1;
+
+        function mapX(x) { return (x - minX) / (maxX - minX) * canvas.width; }
+        function mapY(y) { return canvas.height - ((y - minY) / (maxY - minY) * canvas.height); }
+        function unmapX(px) { return (px / canvas.width) * (maxX - minX) + minX; }
+        function unmapY(py) { return ((canvas.height - py) / canvas.height) * (maxY - minY) + minY; }
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const m = parseFloat(slopeSlider.value);
+            const b = parseFloat(interceptSlider.value);
+            
+            slopeVal.innerText = m.toFixed(2);
+            interceptVal.innerText = b.toFixed(2);
+            formulaDisplay.innerText = `y = ${m.toFixed(2)}x + ${b.toFixed(2)}`;
+
+            ctx.strokeStyle = '#222222'; ctx.lineWidth = 1;
+            for(let i = minX; i <= maxX; i++) { ctx.beginPath(); ctx.moveTo(mapX(i), 0); ctx.lineTo(mapX(i), canvas.height); ctx.stroke(); }
+            for(let i = minY; i <= maxY; i++) { ctx.beginPath(); ctx.moveTo(0, mapY(i)); ctx.lineTo(canvas.width, mapY(i)); ctx.stroke(); }
+
+            ctx.strokeStyle = '#444444'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, mapY(0)); ctx.lineTo(canvas.width, mapY(0)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(mapX(0), 0); ctx.lineTo(mapX(0), canvas.height); ctx.stroke();
+
+            let totalSquaredError = 0;
+
+            points.forEach(point => {
+                const predictedY = m * point.x + b;
+                const error = point.y - predictedY;
+                totalSquaredError += (error * error);
+
+                const px = mapX(point.x);
+                const py = mapY(point.y);
+                const predY_canvas = mapY(predictedY);
+                const pixelSize = Math.abs(predY_canvas - py); 
+
+                ctx.fillStyle = 'rgba(0, 240, 255, 0.2)'; 
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.5)';
+                ctx.lineWidth = 1;
+
+                ctx.beginPath();
+                if (point.y > predictedY) { ctx.rect(px, py, pixelSize, pixelSize); } 
+                else { ctx.rect(px, predY_canvas, pixelSize, pixelSize); }
+                ctx.fill(); ctx.stroke();
+
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+                ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, predY_canvas); ctx.stroke(); ctx.setLineDash([]); 
+            });
+
+            const mse = totalSquaredError / points.length;
+            mseDisplay.innerText = `MSE: ${mse.toFixed(3)}`;
+
+            ctx.strokeStyle = '#00f0ff'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(mapX(minX), mapY(m * minX + b)); ctx.lineTo(mapX(maxX), mapY(m * maxX + b)); ctx.stroke();
+
+            points.forEach((point, i) => {
+                ctx.fillStyle = '#ffffff'; 
+                ctx.strokeStyle = (i === dragIndex) ? '#ffea00' : '#00f0ff'; 
+                ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(mapX(point.x), mapY(point.y), 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            });
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            // Scale logic ensures clicks are accurate even if the CSS resizes the canvas
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+            
+            points.forEach((p, i) => {
+                const px = mapX(p.x); const py = mapY(p.y);
+                if (Math.hypot(px - mouseX, py - mouseY) < 15) { isDragging = true; dragIndex = i; }
+            });
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging && dragIndex !== -1) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                points[dragIndex].x = unmapX((e.clientX - rect.left) * scaleX);
+                points[dragIndex].y = unmapY((e.clientY - rect.top) * scaleY);
+                drawGraph();
+            }
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; dragIndex = -1; drawGraph(); });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; dragIndex = -1; drawGraph(); });
+
+        slopeSlider.addEventListener('input', drawGraph);
+        interceptSlider.addEventListener('input', drawGraph);
+
+        window.autoFit = function() {
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            const n = points.length;
+            points.forEach(p => { sumX += p.x; sumY += p.y; sumXY += p.x * p.y; sumX2 += p.x * p.x; });
+            const optimalM = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const optimalB = (sumY - optimalM * sumX) / n;
+            slopeSlider.value = optimalM; interceptSlider.value = optimalB; drawGraph();
+        }
+
+        drawGraph();
+    </script>
+
+    <footer>
+        VoidX Initiative © 2026. Architected and maintained by <a href="about_me.html">Krishnanand</a>. <br>
+        <span style="font-size: 0.85rem; opacity: 0.7; display: block; margin-top: 10px;">Built for the advancement of open-source AI education.</span>
+    </footer>
+
+</body>
+</html>

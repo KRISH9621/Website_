@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Forest Simulator</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111114; font-family: system-ui, sans-serif; }
+        #info-panel {
+            position: absolute; top: 20px; left: 20px; color: #fff; background: rgba(20, 20, 25, 0.85);
+            padding: 20px; border-radius: 8px; border: 1px solid #333; pointer-events: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 10;
+        }
+        h2 { margin: 0 0 10px 0; font-size: 18px; color: #4facfe; }
+        select { width: 100%; padding: 8px; margin-bottom: 15px; background: #222; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer;}
+        .instruction { color: #888; font-size: 12px; margin-top: 15px; font-style: italic; }
+        .legend-item { display: flex; align-items: center; margin-top: 8px; font-size: 13px; color: #aaa;}
+        .color-box { width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; }
+        
+        /* FIX: Ensure the canvas takes up the whole screen */
+        #3d-graph { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+    </style>
+    
+    <script src="https://unpkg.com/3d-force-graph"></script>
+</head>
+<body>
+
+    <div id="info-panel">
+        <h2>Random Forest</h2>
+        
+        <select id="treeSelector">
+            <option value="0">Expert Tree 1 (Root: Major Vessels)</option>
+            <option value="1">Expert Tree 2 (Root: Major Vessels, diff branch)</option>
+            <option value="2">Expert Tree 3 (Root: Exercise Angina)</option>
+        </select>
+
+        <div class="legend-item"><div class="color-box" style="background: #4facfe;"></div> Decision Rule</div>
+        <div class="legend-item"><div class="color-box" style="background: #2ea043;"></div> Prediction: Healthy</div>
+        <div class="legend-item"><div class="color-box" style="background: #f85149;"></div> Prediction: Heart Disease</div>
+        <div class="instruction">✦ Drag nodes to stretch. Scroll to zoom.</div>
+    </div>
+
+    <div id="3d-graph"></div>
+
+    <script>
+        // The real, fully populated data from your Python script
+        const forestData = [
+            {
+                "tree_name": "Expert Tree 1",
+                "nodes": [
+                    {"id": "T0_0", "type": "Decision", "rule": "Major Vessels (ca) <= 0.5", "samples": 654, "impurity": 0.5, "class": null, "depth": 0},
+                    {"id": "T0_1", "type": "Decision", "rule": "Thal <= 2.5", "samples": 373, "impurity": 0.413, "class": null, "depth": 1},
+                    {"id": "T0_2", "type": "Decision", "rule": "Exercise Angina <= 0.5", "samples": 261, "impurity": 0.245, "class": null, "depth": 2},
+                    {"id": "T0_3", "type": "Leaf", "rule": "Prediction", "samples": 218, "impurity": 0.174, "class": "Heart Disease", "depth": 3},
+                    {"id": "T0_4", "type": "Leaf", "rule": "Prediction", "samples": 43, "impurity": 0.456, "class": "Heart Disease", "depth": 3},
+                    {"id": "T0_5", "type": "Decision", "rule": "Exercise Angina <= 0.5", "samples": 112, "impurity": 0.469, "class": null, "depth": 2},
+                    {"id": "T0_6", "type": "Leaf", "rule": "Prediction", "samples": 61, "impurity": 0.49, "class": "Heart Disease", "depth": 3},
+                    {"id": "T0_7", "type": "Leaf", "rule": "Prediction", "samples": 51, "impurity": 0.235, "class": "Healthy", "depth": 3},
+                    {"id": "T0_8", "type": "Decision", "rule": "Exercise Angina <= 0.5", "samples": 281, "impurity": 0.376, "class": null, "depth": 1},
+                    {"id": "T0_9", "type": "Decision", "rule": "Major Vessels (ca) <= 3.5", "samples": 159, "impurity": 0.476, "class": null, "depth": 2},
+                    {"id": "T0_10", "type": "Leaf", "rule": "Prediction", "samples": 145, "impurity": 0.44, "class": "Healthy", "depth": 3},
+                    {"id": "T0_11", "type": "Leaf", "rule": "Prediction", "samples": 14, "impurity": 0.0, "class": "Heart Disease", "depth": 3},
+                    {"id": "T0_12", "type": "Decision", "rule": "ST Depress (oldpeak) <= 0.4", "samples": 122, "impurity": 0.128, "class": null, "depth": 2},
+                    {"id": "T0_13", "type": "Leaf", "rule": "Prediction", "samples": 27, "impurity": 0.399, "class": "Healthy", "depth": 3},
+                    {"id": "T0_14", "type": "Leaf", "rule": "Prediction", "samples": 95, "impurity": 0.026, "class": "Healthy", "depth": 3}
+                ],
+                "links": [
+                    {"source": "T0_0", "target": "T0_1", "condition": "True"}, {"source": "T0_1", "target": "T0_2", "condition": "True"},
+                    {"source": "T0_2", "target": "T0_3", "condition": "True"}, {"source": "T0_2", "target": "T0_4", "condition": "False"},
+                    {"source": "T0_1", "target": "T0_5", "condition": "False"}, {"source": "T0_5", "target": "T0_6", "condition": "True"},
+                    {"source": "T0_5", "target": "T0_7", "condition": "False"}, {"source": "T0_0", "target": "T0_8", "condition": "False"},
+                    {"source": "T0_8", "target": "T0_9", "condition": "True"}, {"source": "T0_9", "target": "T0_10", "condition": "True"},
+                    {"source": "T0_9", "target": "T0_11", "condition": "False"}, {"source": "T0_8", "target": "T0_12", "condition": "False"},
+                    {"source": "T0_12", "target": "T0_13", "condition": "True"}, {"source": "T0_12", "target": "T0_14", "condition": "False"}
+                ]
+            },
+            {
+                "tree_name": "Expert Tree 2",
+                "nodes": [
+                    {"id": "T1_0", "type": "Decision", "rule": "Major Vessels (ca) <= 0.5", "samples": 656, "impurity": 0.5, "class": null, "depth": 0},
+                    {"id": "T1_1", "type": "Decision", "rule": "Exercise Angina <= 0.5", "samples": 378, "impurity": 0.412, "class": null, "depth": 1},
+                    {"id": "T1_2", "type": "Decision", "rule": "Cholesterol <= 211.5", "samples": 279, "impurity": 0.281, "class": null, "depth": 2},
+                    {"id": "T1_3", "type": "Leaf", "rule": "Prediction", "samples": 85, "impurity": 0.108, "class": "Heart Disease", "depth": 3},
+                    {"id": "T1_4", "type": "Leaf", "rule": "Prediction", "samples": 194, "impurity": 0.342, "class": "Heart Disease", "depth": 3},
+                    {"id": "T1_5", "type": "Decision", "rule": "Chest Pain (cp) <= 0.5", "samples": 99, "impurity": 0.466, "class": null, "depth": 2},
+                    {"id": "T1_6", "type": "Leaf", "rule": "Prediction", "samples": 71, "impurity": 0.377, "class": "Healthy", "depth": 3},
+                    {"id": "T1_7", "type": "Leaf", "rule": "Prediction", "samples": 28, "impurity": 0.465, "class": "Heart Disease", "depth": 3},
+                    {"id": "T1_8", "type": "Decision", "rule": "Age <= 42.5", "samples": 278, "impurity": 0.345, "class": null, "depth": 1},
+                    {"id": "T1_9", "type": "Leaf", "rule": "Prediction", "samples": 10, "impurity": 0.0, "class": "Heart Disease", "depth": 2},
+                    {"id": "T1_10", "type": "Decision", "rule": "ST Depress (oldpeak) <= 0.6", "samples": 268, "impurity": 0.303, "class": null, "depth": 2},
+                    {"id": "T1_11", "type": "Leaf", "rule": "Prediction", "samples": 90, "impurity": 0.499, "class": "Healthy", "depth": 3},
+                    {"id": "T1_12", "type": "Leaf", "rule": "Prediction", "samples": 178, "impurity": 0.091, "class": "Healthy", "depth": 3}
+                ],
+                "links": [
+                    {"source": "T1_0", "target": "T1_1", "condition": "True"}, {"source": "T1_1", "target": "T1_2", "condition": "True"},
+                    {"source": "T1_2", "target": "T1_3", "condition": "True"}, {"source": "T1_2", "target": "T1_4", "condition": "False"},
+                    {"source": "T1_1", "target": "T1_5", "condition": "False"}, {"source": "T1_5", "target": "T1_6", "condition": "True"},
+                    {"source": "T1_5", "target": "T1_7", "condition": "False"}, {"source": "T1_0", "target": "T1_8", "condition": "False"},
+                    {"source": "T1_8", "target": "T1_9", "condition": "True"}, {"source": "T1_8", "target": "T1_10", "condition": "False"},
+                    {"source": "T1_10", "target": "T1_11", "condition": "True"}, {"source": "T1_10", "target": "T1_12", "condition": "False"}
+                ]
+            },
+            {
+                "tree_name": "Expert Tree 3",
+                "nodes": [
+                    {"id": "T2_0", "type": "Decision", "rule": "Exercise Angina <= 0.5", "samples": 651, "impurity": 0.5, "class": null, "depth": 0},
+                    {"id": "T2_1", "type": "Decision", "rule": "Slope <= 1.5", "samples": 425, "impurity": 0.451, "class": null, "depth": 1},
+                    {"id": "T2_2", "type": "Decision", "rule": "Major Vessels (ca) <= 0.5", "samples": 177, "impurity": 0.5, "class": null, "depth": 2},
+                    {"id": "T2_3", "type": "Leaf", "rule": "Prediction", "samples": 97, "impurity": 0.393, "class": "Heart Disease", "depth": 3},
+                    {"id": "T2_4", "type": "Leaf", "rule": "Prediction", "samples": 80, "impurity": 0.285, "class": "Healthy", "depth": 3},
+                    {"id": "T2_5", "type": "Decision", "rule": "Fasting Blood Sugar <= 0.5", "samples": 248, "impurity": 0.336, "class": null, "depth": 2},
+                    {"id": "T2_6", "type": "Leaf", "rule": "Prediction", "samples": 213, "impurity": 0.358, "class": "Heart Disease", "depth": 3},
+                    {"id": "T2_7", "type": "Leaf", "rule": "Prediction", "samples": 35, "impurity": 0.147, "class": "Heart Disease", "depth": 3},
+                    {"id": "T2_8", "type": "Decision", "rule": "ST Depress (oldpeak) <= 0.7", "samples": 226, "impurity": 0.31, "class": null, "depth": 1},
+                    {"id": "T2_9", "type": "Decision", "rule": "Cholesterol <= 206.5", "samples": 64, "impurity": 0.499, "class": null, "depth": 2},
+                    {"id": "T2_10", "type": "Leaf", "rule": "Prediction", "samples": 6, "impurity": 0.0, "class": "Healthy", "depth": 3},
+                    {"id": "T2_11", "type": "Leaf", "rule": "Prediction", "samples": 58, "impurity": 0.499, "class": "Heart Disease", "depth": 3},
+                    {"id": "T2_12", "type": "Decision", "rule": "ST Depress (oldpeak) <= 1.6", "samples": 162, "impurity": 0.153, "class": null, "depth": 2},
+                    {"id": "T2_13", "type": "Leaf", "rule": "Prediction", "samples": 58, "impurity": 0.348, "class": "Healthy", "depth": 3},
+                    {"id": "T2_14", "type": "Leaf", "rule": "Prediction", "samples": 104, "impurity": 0.012, "class": "Healthy", "depth": 3}
+                ],
+                "links": [
+                    {"source": "T2_0", "target": "T2_1", "condition": "True"}, {"source": "T2_1", "target": "T2_2", "condition": "True"},
+                    {"source": "T2_2", "target": "T2_3", "condition": "True"}, {"source": "T2_2", "target": "T2_4", "condition": "False"},
+                    {"source": "T2_1", "target": "T2_5", "condition": "False"}, {"source": "T2_5", "target": "T2_6", "condition": "True"},
+                    {"source": "T2_5", "target": "T2_7", "condition": "False"}, {"source": "T2_0", "target": "T2_8", "condition": "False"},
+                    {"source": "T2_8", "target": "T2_9", "condition": "True"}, {"source": "T2_9", "target": "T2_10", "condition": "True"},
+                    {"source": "T2_9", "target": "T2_11", "condition": "False"}, {"source": "T2_8", "target": "T2_12", "condition": "False"},
+                    {"source": "T2_12", "target": "T2_13", "condition": "True"}, {"source": "T2_12", "target": "T2_14", "condition": "False"}
+                ]
+            }
+        ];
+
+        const elem = document.getElementById('3d-graph');
+        const selector = document.getElementById('treeSelector');
+
+        // Initialize the Graph
+        const Graph = ForceGraph3D()(elem)
+            .backgroundColor('#111114')
+            .nodeColor(node => {
+                if (node.type === "Decision") return '#4facfe';
+                if (node.class === "Healthy") return '#2ea043';
+                if (node.class === "Heart Disease") return '#f85149';
+                return '#888';
+            })
+            .nodeLabel(node => `
+                <div style="background: rgba(0,0,0,0.8); padding: 8px; border-radius: 4px; border: 1px solid #333;">
+                    <strong style="color: white; font-size: 14px;">${node.type === 'Decision' ? node.rule : node.class}</strong><br>
+                    <span style="color:#aaa; font-size:12px;">Type: ${node.type}</span><br>
+                    <span style="color:#aaa; font-size:12px;">Samples checked: ${node.samples}</span>
+                </div>
+            `)
+            .nodeVal(node => node.type === "Decision" ? 15 : 8)
+            .linkWidth(2)
+            .linkOpacity(0.6); // <--- FIX: Chaining stops here!
+
+        // FIX: Physics settings are run independently
+        Graph.d3Force('link').distance(80);
+        Graph.d3Force('charge').strength(-400);
+
+        Graph.onNodeDragEnd(node => { node.fx = node.x; node.fy = node.y; node.fz = node.z; });
+
+        // FIX: Deep clone the data so switching dropdowns doesn't break the physics engine!
+        function loadTree(treeIndex) {
+            const freshData = JSON.parse(JSON.stringify(forestData[treeIndex]));
+            Graph.graphData(freshData);
+        }
+
+        // Listen for dropdown changes
+        selector.addEventListener('change', (event) => {
+            loadTree(event.target.value);
+        });
+
+        // Load the first tree initially
+        loadTree(0);
+        // FIX: Force the 3D engine to measure the screen exactly
+        Graph.width(window.innerWidth);
+        Graph.height(window.innerHeight);
+
+        // FIX: Make it responsive so if you resize your browser window, the 3D graph resizes with it!
+        window.addEventListener('resize', () => {
+            Graph.width(window.innerWidth);
+            Graph.height(window.innerHeight);
+        });
+    </script>
+</body>
+</html>

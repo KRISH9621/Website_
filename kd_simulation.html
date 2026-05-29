@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive KD-Tree</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        /* Flexbox to keep buttons neatly side-by-side above the grid */
+        #controls {
+            display: flex;
+            gap: 15px; 
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.2s, transform 0.1s;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        /* Buttons get specific accent colors */
+        #btn-generate { border-left: 4px solid #fff; }
+        #btn-clear { border-left: 4px solid #ff5555; }
+        
+        canvas {
+            background-color: #111;
+            border: 1px solid #333;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+            cursor: crosshair;
+        }
+        p {
+            color: #aaa;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <button id="btn-generate" onclick="generateNewPoints()">Generate Random Points</button>
+        <button id="btn-clear" onclick="clearQuery()">Clear Query Point</button>
+    </div>
+    
+    <p>Click anywhere on the grid to place a Query Point. X-splits are <span style="color:#ff4444; font-weight:bold;">Red</span>, Y-splits are <span style="color:#44aaff; font-weight:bold;">Blue</span>.</p>
+    
+    <canvas id="kdCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('kdCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        let points = [];
+        let kdTreeRoot = null;
+        let queryPoint = null;
+        let nearestResult = null;
+        let animationRadius = 0;
+        let animationFrameId = null;
+
+        // Mathematical Helper: Euclidean Distance
+        function distance(p1, p2) {
+            return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+        }
+
+        class Node {
+            constructor(point, axis) {
+                this.point = point;
+                this.axis = axis; // 0 for X, 1 for Y
+                this.left = null;
+                this.right = null;
+            }
+        }
+
+        // 1. Construction Logic
+        function buildKDTree(pts, depth = 0) {
+            if (pts.length === 0) return null;
+            const axis = depth % 2; 
+            pts.sort((a, b) => axis === 0 ? a.x - b.x : a.y - b.y);
+            const medianIndex = Math.floor(pts.length / 2);
+            const node = new Node(pts[medianIndex], axis);
+            node.left = buildKDTree(pts.slice(0, medianIndex), depth + 1);
+            node.right = buildKDTree(pts.slice(medianIndex + 1), depth + 1);
+            return node;
+        }
+
+        // 2. Search Logic
+        function nearestNeighbor(node, target, depth, best) {
+            if (node === null) return best;
+            const axis = depth % 2;
+            let nextBest = best;
+
+            const d = distance(node.point, target);
+            if (best === null || d < best.dist) {
+                nextBest = { point: node.point, dist: d };
+            }
+
+            const isLeft = axis === 0 ? target.x < node.point.x : target.y < node.point.y;
+            const firstBranch = isLeft ? node.left : node.right;
+            const secondBranch = isLeft ? node.right : node.left;
+
+            nextBest = nearestNeighbor(firstBranch, target, depth + 1, nextBest);
+
+            const planeDist = axis === 0 ? Math.abs(target.x - node.point.x) : Math.abs(target.y - node.point.y);
+            
+            if (planeDist < nextBest.dist) {
+                nextBest = nearestNeighbor(secondBranch, target, depth + 1, nextBest);
+            }
+
+            return nextBest;
+        }
+
+        // --- Drawing and UI Functions ---
+
+        function drawTree(node, minX, maxX, minY, maxY) {
+            if (!node) return;
+
+            ctx.lineWidth = 1.5;
+            if (node.axis === 0) {
+                // X-Axis Split: Bright Red
+                ctx.strokeStyle = 'rgba(255, 68, 68, 0.6)'; 
+                ctx.beginPath();
+                ctx.moveTo(node.point.x, minY);
+                ctx.lineTo(node.point.x, maxY);
+                ctx.stroke();
+                drawTree(node.left, minX, node.point.x, minY, maxY);
+                drawTree(node.right, node.point.x, maxX, minY, maxY);
+            } else {
+                // Y-Axis Split: Bright Blue
+                ctx.strokeStyle = 'rgba(68, 170, 255, 0.6)'; 
+                ctx.beginPath();
+                ctx.moveTo(minX, node.point.y);
+                ctx.lineTo(maxX, node.point.y);
+                ctx.stroke();
+                drawTree(node.left, minX, maxX, minY, node.point.y);
+                drawTree(node.right, minX, maxX, node.point.y, maxY);
+            }
+        }
+
+        function drawPoints() {
+            ctx.fillStyle = '#ffffff';
+            points.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function renderScene() {
+            ctx.clearRect(0, 0, width, height);
+            
+            drawTree(kdTreeRoot, 0, width, 0, height);
+            drawPoints();
+
+            // Draw Query Point and Labels
+            if (queryPoint) {
+                // Query Point Styling
+                ctx.fillStyle = '#ffea00'; 
+                ctx.beginPath();
+                ctx.arc(queryPoint.x, queryPoint.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Query Label
+                ctx.font = "bold 14px Arial";
+                ctx.fillStyle = "#ffea00";
+                ctx.fillText("Query", queryPoint.x + 10, queryPoint.y - 10);
+
+                if (nearestResult) {
+                    // Expanding Radius
+                    ctx.strokeStyle = '#00ff88'; 
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(queryPoint.x, queryPoint.y, animationRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Nearest Neighbor Found
+                    if (animationRadius >= nearestResult.dist) {
+                        // Neighbor Point Styling
+                        ctx.fillStyle = '#00ff88';
+                        ctx.beginPath();
+                        ctx.arc(nearestResult.point.x, nearestResult.point.y, 7, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Neighbor Label
+                        ctx.fillStyle = "#00ff88";
+                        ctx.fillText("Nearest Neighbor", nearestResult.point.x + 12, nearestResult.point.y - 12);
+
+                        // Connecting Line
+                        ctx.setLineDash([5, 5]); // Dashed line
+                        ctx.beginPath();
+                        ctx.moveTo(queryPoint.x, queryPoint.y);
+                        ctx.lineTo(nearestResult.point.x, nearestResult.point.y);
+                        ctx.stroke();
+                        ctx.setLineDash([]); // Reset to solid line for next render
+                    }
+                }
+            }
+        }
+
+        function animateSearch() {
+            if (nearestResult && animationRadius < nearestResult.dist) {
+                animationRadius += Math.max(3, nearestResult.dist / 25); 
+                if (animationRadius > nearestResult.dist) animationRadius = nearestResult.dist;
+                renderScene();
+                animationFrameId = requestAnimationFrame(animateSearch);
+            } else {
+                renderScene(); 
+            }
+        }
+
+        function generateNewPoints() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            points = [];
+            for (let i = 0; i < 40; i++) {
+                points.push({
+                    x: Math.random() * (width - 60) + 30,
+                    y: Math.random() * (height - 60) + 30
+                });
+            }
+            kdTreeRoot = buildKDTree([...points]); 
+            queryPoint = null;
+            nearestResult = null;
+            renderScene();
+        }
+
+        // New function to clear just the query point
+        function clearQuery() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            queryPoint = null;
+            nearestResult = null;
+            animationRadius = 0;
+            renderScene();
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            queryPoint = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+            
+            if (kdTreeRoot) {
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                nearestResult = nearestNeighbor(kdTreeRoot, queryPoint, 0, null);
+                animationRadius = 0;
+                animateSearch();
+            }
+        });
+
+        generateNewPoints();
+
+    </script>
+</body>
+</html>

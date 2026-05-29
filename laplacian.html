@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoidX Initiative | Laplacian Smoothing</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --brand-accent: #00f0ff;
+            --brand-dark: #020617;
+            --surface-color: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        /* --- AUTHOR BYLINE STYLES --- */
+        .author-byline {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: -10px;
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+        }
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #1e293b; /* Fallback color */
+            border: 2px solid rgba(0, 240, 255, 0.3);
+            object-fit: cover;
+        }
+        .author-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .author-name {
+            color: #fff;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .author-name:hover {
+            color: var(--brand-accent);
+        }
+        .author-meta {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        /* --- PROFESSIONAL FOOTER STYLES --- */
+        footer { 
+            padding: 50px 5vw; 
+            text-align: center; 
+            color: var(--text-muted); 
+            font-size: 0.95rem; 
+            border-top: 1px solid rgba(255,255,255,0.05); 
+            margin-top: 80px;
+            background: rgba(2, 6, 23, 0.8);
+        }
+        footer a { 
+            color: var(--brand-accent); 
+            text-decoration: none; 
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        footer a:hover {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+        }
+
+        /* --- VIDEO EMBED STYLES --- */
+        .reference-section {
+            margin: 60px 0;
+            padding: 30px;
+            background: rgba(0, 240, 255, 0.02);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 240, 255, 0.1);
+        }
+        .reference-section h3 {
+            margin-top: 0;
+        }
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* Forces a perfect 16:9 Aspect Ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 20px;
+        }
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background-color: var(--brand-dark); color: var(--text-main);
+            font-family: 'Inter', sans-serif; overflow-x: hidden;
+            line-height: 1.8;
+        }
+
+        /* --- SUBTLE MESH BACKGROUND --- */
+        .grid-bg { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -10;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* --- MAIN LAYOUT --- */
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 5vw; }
+        
+        /* --- NAVIGATION --- */
+        nav { padding: 30px 5vw; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; letter-spacing: 2px; text-decoration: none; }
+        .logo span { color: var(--brand-accent); }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+        .back-link:hover { color: var(--brand-accent); }
+
+        /* --- TYPOGRAPHY --- */
+        h1 { font-family: 'Space Grotesk', sans-serif; font-size: 3.5rem; font-weight: 700; margin: 0 0 20px 0; line-height: 1.1; letter-spacing: -1px; }
+        h2 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: var(--brand-accent); margin-top: 60px; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 10px; }
+        h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; color: #fff; margin-top: 40px;margin-bottom: 20px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 10px;}
+        h4 { font-family: 'Space Grotesk', sans-serif; font-size: 1.9rem; color: #fff; margin-top: 10px; margin-bottom: 20px;  }
+        h5 { font-family: 'Space Grotesk', 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif, 'Times New Roman', Times, serif; font-size: 2.3rem; color: #f4a920; margin-top: 30px; margin-bottom: 20px;}
+
+        p, li { font-size: 1.15rem; color: var(--text-muted); margin-bottom: 25px; }
+        strong { color: oklab(100% 0 -0.00011); }
+        
+        /* MathJax Override for better visibility */
+        .mjx-chtml { color: #f0ae9de2 !important; margin: 20px 0; }
+
+        /* --- SIMULATION WIDGET STYLES (Split Layout) --- */
+        .sim-wrapper {
+            background: #0a0a0a;
+            padding: 40px;
+            width: 100%;
+            max-width: 850px; /* Widened to fit side-by-side */
+            margin: 60px auto;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+            font-family: system-ui, -apple-system, sans-serif;
+            box-sizing: border-box;
+        }
+        .sim-wrapper h2 {
+            font-weight: 500; margin-top: 0; margin-bottom: 10px; font-size: 24px; color: #fff; border: none; padding: 0; text-align: center;
+        }
+        .subtitle {
+            font-size: 12px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 30px; color: #aaa; text-align: center;
+        }
+        
+        /* The Side-by-Side Flexbox */
+        .sim-layout {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap; /* Keeps it responsive on smaller screens */
+        }
+        .sim-left {
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .sim-right {
+            flex: 1; min-width: 280px; display: flex; flex-direction: column; justify-content: center;
+        }
+
+        #grid {
+            display: grid; grid-template-columns: repeat(20, 1fr); gap: 1px;
+            background-color: #333; border: 1px solid #333; margin: 0 auto 20px auto;
+            aspect-ratio: 1 / 1; width: 100%; max-width: 350px;
+        }
+        .cell {
+            background-color: #1a1a1a; cursor: crosshair; transition: background-color 0.05s linear;
+        }
+        
+        /* Value Selector */
+        .value-selector {
+            display: flex; gap: 15px; background-color: #1a1a1a; padding: 10px 20px;
+            border-radius: 20px; width: fit-content; margin: 0 auto;
+        }
+        .radio-label {
+            display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; color: #aaa; transition: color 0.2s;
+        }
+        .radio-label:hover, .radio-label.active { color: #fff; }
+        .radio-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot-low { background-color: #4a5568; }
+        .dot-med { background-color: #3182ce; }
+        .dot-high { background-color: #e2e8f0; }
+
+        /* Dashboard */
+        .dashboard {
+            display: flex; justify-content: space-around; border-top: 1px solid #333; border-bottom: 1px solid #333;
+            padding: 20px 0; margin-bottom: 30px; width: 100%;
+        }
+        .dash-item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .dash-label { font-size: 14px; color: #ccc; }
+        .dash-value { font-family: monospace; font-size: 16px; color: #fff;}
+
+        /* Controls */
+        .controls {
+            display: grid; grid-template-columns: auto 1fr; grid-template-areas: "play step" "reset reset"; gap: 15px; align-items: center; width: 100%;
+        }
+        .play-group { grid-area: play; display: flex; align-items: center; gap: 15px; }
+        .play-label { font-size: 16px; color: #ccc; }
+        .btn-play {
+            width: 44px; height: 44px; border-radius: 50%; border: none; background-color: white; color: black;
+            display: flex; justify-content: center; align-items: center; cursor: pointer; transition: transform 0.1s, background-color 0.2s;
+        }
+        .btn-play:active { transform: scale(0.95); }
+        .btn-pill {
+            border: none; border-radius: 24px; background-color: #222; color: white; padding: 14px 24px;
+            font-size: 14px; cursor: pointer; transition: background-color 0.2s;
+        }
+        .btn-pill:hover { background-color: #333; }
+        .btn-pill:active { background-color: #111; }
+        .btn-step { grid-area: step; }
+        .btn-reset { grid-area: reset; width: 100%; }
+
+        /* SVG Icons */
+        .sim-wrapper svg { width: 16px; height: 16px; fill: currentColor; }
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+
+    <nav>
+        <a href="index.html" class="logo">VoidX <span>Initiative</span></a>
+        <a href="index.html" class="back-link">← Back to Modules</a>
+    </nav>
+
+    <div class="container">
+        <h1>THE LAPLACIAN ~The Calculus of Smoothing</h1>
+        
+        <div class="author-byline">
+            <img src="your-profile-pic.jpg" alt="Krishnanand" class="author-avatar" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%2394a3b8\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'">
+            <div class="author-info">
+                <a href="about_me.html" class="author-name">By Krishnanand</a>
+                <span class="author-meta"> May 2026</span>
+            </div>
+        </div>
+
+
+        <h5>Hey learner! </h5>
+        <h4>Before diving deep into the Laplacian, let us first play with this simulation.</h4>
+        
+        <div class="sim-wrapper">
+            <h2>Laplacian Smoothing Simulator</h2>
+            <div class="subtitle">Click grid to add peaks</div>
+
+            <div class="sim-layout">
+                <div class="sim-left">
+                    <div id="grid"></div>
+                    
+                    <div class="value-selector">
+                        <div class="radio-label" onclick="setDrawValue(25, this)">
+                            <div class="radio-dot dot-low"></div> Low Value
+                        </div>
+                        <div class="radio-label" onclick="setDrawValue(60, this)">
+                            <div class="radio-dot dot-med"></div> Medium
+                        </div>
+                        <div class="radio-label active" onclick="setDrawValue(100, this)">
+                            <div class="radio-dot dot-high"></div> High Value
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sim-right">
+                    <div class="dashboard">
+                        <div class="dash-item">
+                            <div class="dash-label">Smoothing Status</div>
+                            <div class="dash-value" id="statusDisplay">Idle</div>
+                        </div>
+                        <div class="dash-item">
+                            <div class="dash-label">Current Iteration</div>
+                            <div class="dash-value" id="iterationDisplay">0</div>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <div class="play-group">
+                            <span class="play-label">Smoothing</span>
+                            <button class="btn-play" id="playBtn" onclick="togglePlay()">
+                                <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                <svg id="icon-pause" viewBox="0 0 24 24" style="display: none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                            </button>
+                        </div>
+                        
+                        <button class="btn-pill btn-step" onclick="stepSimulation()">Apply Step</button>
+                        <button class="btn-pill btn-reset" onclick="resetGrid()">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h2>What is happening above ? &#9757  </h2>
+        <p>The initial flat, black grid represents perfect harmony, where the Laplacian detects zero difference between neighbors.
+            Clicking the grid injects chaos by adding sharp spikes that contrast massively with their surroundings.</p>
+        <p>The Laplacian acts as a "difference detector," comparing every square to the average of its four neighbors. 
+            To restore balance, the simulator uses this data to smooth out anomalies—peaks distribute their energy outward, melting the spikes until the grid eventually returns to a flat, calm state.</p>
+        <p></p>
+
+
+
+        <h2>What is Laplacian?</h2>
+        <p>The Laplacian (often written as \(\nabla^2\) or \(\Delta\)) is a mathematical tool that measures how much a specific point differs from the average of its immediate neighbors. It is essentially a "roughness detector".</p>
+
+        <h3>What exactly it does</h3>
+        <p>To understand what it does, think about looking at a raw 3D mesh structure. Pick one single vertex (a point) and look at the points connected to it:</p>
+        <ul>
+            <li><strong>The Spike:</strong> If your vertex is pulled way out, forming a sharp spike above its neighbors, the Laplacian will give you a very high value. It's shouting, "Hey, this point is way higher than its surroundings!"</li>
+            <li><strong>The Dent:</strong> If the vertex is pushed deep into a valley compared to its neighbors, the Laplacian gives a high value in the opposite direction.</li>
+            <li><strong>The Flat Surface:</strong> If the vertex sits perfectly flush and smooth with the points around it, the Laplacian is zero. It tells you nothing interesting is happening here.</li>
+        </ul>
+
+        <h3>How it's used (The Action)</h3>
+        <p>Because the Laplacian is so good at detecting spikes and dents, it is heavily used as a smoothing engine. If you want to clean up a rough mesh or data set, you tell the computer: "Look at the Laplacian for every point. If a point is higher than its neighbors, push it down a little. If it's lower, pull it up".</p>
+        <p>By repeatedly applying this math, the system aggressively smooths out all the sharp edges and anomalies until everything is balanced. This exact same principle (averaging out differences) is also how physics calculates the way heat diffuses through a cold room or how a drop of ink spreads out in water.</p>
+        <div class="reference-section">
+            <h3>Visualizing the Intuition</h3>
+            <p>If you prefer a geometric explanation, this excellent breakdown by Khan Academy perfectly illustrates how to visualize the Laplacian as fluid flow and slope steepness.</p>
+            
+            <div class="video-wrapper">
+                <iframe 
+                    src="https://www.youtube.com/embed/EW08rD-GFh0" 
+                    title="Laplacian Intuition - Khan Academy" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+            
+            <p style="font-size: 0.9rem; margin-top: 15px;">
+                <strong>Key Takeaways:</strong><br>
+                • [00:00:53] The Laplacian is formally defined as the divergence of the gradient $$\nabla \cdot \nabla f$$<br>
+                • [00:02:31] Think of the gradient as fluid flow. Vectors pointing away mean positive divergence, and converging vectors mean negative divergence.<br>
+                • [00:04:45] The Laplacian acts as a multivariable second derivative, measuring how much a point acts like a local minimum or maximum compared to its neighbors.
+            </p>
+        </div>
+        <h2>Under the Hood: Gradient & Divergence</h2>
+        <p>Now that we have the intuition down, let's look under the hood. In mathematics, the Laplacian is a second-order differential operator. If you are comfortable with calculus, the easiest way to understand the Laplacian is to break it down into two simpler concepts: the Gradient and the Divergence. Here is the step-by-step breakdown of the math and how it actually operates in a system.</p>
+
+        <h3>1. The Building Blocks</h3>
+        <p>To get to the Laplacian, we have to perform two mathematical operations in sequence.</p>
+        <p><strong>The Gradient (\(\nabla f\)):</strong> Imagine a 3D room where the temperature varies. The gradient is a vector that points in the direction where the temperature is increasing the fastest. It tells you the slope.</p>
+        $$ \nabla f = \left( \frac{\partial f}{\partial x}, \frac{\partial f}{\partial y}, \frac{\partial f}{\partial z} \right) $$
+
+        <p><strong>The Divergence (\(\nabla \cdot \vec{V}\)):</strong> Now imagine a vector field, like water flowing in a river. Divergence measures how much water is expanding outward from a specific point (a source) or compressing inward (a sink).</p>
+
+        <h3>2. The Laplacian: Divergence of the Gradient</h3>
+        <p>The Laplacian, denoted by \(\Delta\) or \(\nabla^2\), is exactly what happens when you combine those two ideas. It is the divergence of the gradient. Mathematically, you take the gradient of a function (which gives you a vector field of slopes), and then you calculate the divergence of that vector field.</p>
+        <p>For a function \(f(x, y, z)\) in 3D space, the formula is the sum of the unmixed second partial derivatives:</p>
+        $$ \Delta f = \nabla \cdot (\nabla f) = \frac{\partial^2 f}{\partial x^2} + \frac{\partial^2 f}{\partial y^2} + \frac{\partial^2 f}{\partial z^2} $$
+
+        <p>What does this actually mean? In standard 1D calculus, the first derivative is the slope, and the second derivative is the concavity (how the curve bends). The Laplacian is simply the multi-dimensional equivalent of the second derivative. It calculates the net curvature of a point across all dimensions.</p>
+        <ul>
+            <li><strong>If \(\Delta f > 0\):</strong> The point is a local minimum (a valley). It is "cupping upward" toward its neighbors.</li>
+            <li><strong>If \(\Delta f < 0\):</strong> The point is a local maximum (a peak). It is "cupping downward" away from its neighbors.</li>
+            <li><strong>If \(\Delta f = 0\):</strong> The area is mathematically flat or perfectly balanced (this is called Laplace's Equation).</li>
+        </ul>
+
+        <h2>3. How it Works in Practice (The Discrete Laplacian)</h2>
+        <p>Continuous calculus equations are great for pure math, but if you are writing Python code to process a 3D mesh or a data grid, you don't have continuous space. You have discrete vertices and coordinates.</p>
+        <p>To make the Laplacian work in an algorithm, we use a finite difference approximation. We stop using derivatives and start using basic arithmetic.</p>
+        <p>For a single vertex \(v_i\) on a 3D mesh, the discrete Laplacian operator looks at all the immediate neighboring vertices connected to it by an edge. It calculates:</p>
+        $$ L(v_i) = \frac{1}{N} \sum_{j \in Neighbors} (v_j - v_i) $$
+        <p>(Where \(N\) is the number of neighbors).</p>
+
+        <h3>The Algorithm Flow:</h3>
+        <ul>
+            <li><strong>Iterate:</strong> The code loops through every single vertex in the structure.</li>
+            <li><strong>Average:</strong> For the current vertex, it finds the exact spatial average of all its connected neighbors.</li>
+            <li><strong>Compare:</strong> It subtracts the vertex's current position from that neighborly average.</li>
+            <li><strong>Result:</strong> That resulting vector is the Laplacian. It points exactly in the direction the vertex needs to move to be perfectly smooth with its surroundings, and its magnitude tells you how far it needs to go.</li>
+        </ul>
+        <p>If you plug that resulting vector back into the vertex coordinates and repeat the loop, you have built a functional smoothing engine. This is exactly where the magic happens in computer graphics and mesh processing. It is the bridge between pure math and computer code.</p>
+
+        <h2>4. The Math Trick: How Averaging = Calculus</h2>
+        <p>To make a computer do calculus, we "discretize" the math. We tell the computer: "Since we don't have an infinitely small distance to measure, just use the smallest distance we actually have". In calculus, a derivative measures change over an infinitely tiny step, written as \(dx\). In a discrete mesh, we measure change over a physical step to the very next vertex, written as \(\Delta x\).</p>
+        <p>Here is the "Aha!" moment. Let's look at a simple 1D line to prove how the calculus second derivative (the Laplacian) mathematically simplifies into an average. Imagine three vertices on a line, spaced out by a distance of \(h\):</p>
+        <ul>
+            <li>\(V_{left}\)</li>
+            <li>\(V_{mid}\) (This is the point we are looking at)</li>
+            <li>\(V_{right}\)</li>
+        </ul>
+
+        <h3>Step A: The First Derivative (Slope)</h3>
+        <p>In calculus, the first derivative is the slope. In arithmetic, slope is just "Rise over Run".</p>
+        <ul>
+            <li>The slope looking to the right is: \(\frac{V_{right} - V_{mid}}{h}\)</li>
+            <li>The slope looking to the left is: \(\frac{V_{mid} - V_{left}}{h}\)</li>
+        </ul>
+
+        <h3>Step B: The Second Derivative (The Laplacian)</h3>
+        <p>The second derivative is the change in the slope. So, we subtract the left slope from the right slope, and divide by the distance \(h\) again:</p>
+        $$ \Delta V_{mid} \approx \frac{\frac{V_{right} - V_{mid}}{h} - \frac{V_{mid} - V_{left}}{h}}{h} $$
+        
+        <p>Let's clean up that algebra by combining the top part:</p>
+        $$ \Delta V_{mid} \approx \frac{V_{right} - V_{mid} - V_{mid} + V_{left}}{h^2} $$
+        $$ \Delta V_{mid} \approx \frac{V_{right} + V_{left} - 2V_{mid}}{h^2} $$
+
+        <h3>Step C: Revealing the Average</h3>
+        <p>Now, let's rearrange that final equation slightly. Let's pull the number 2 out to the front:</p>
+        $$ \Delta V_{mid} \approx \frac{2}{h^2} \left( \frac{V_{right} + V_{left}}{2} - V_{mid} \right) $$
+
+        <p>Look closely at this part of the equation: \(\frac{V_{right} + V_{left}}{2}\). That is the exact formula for the arithmetic average of the neighbors! The math naturally resolves into:</p>
+        $$ \text{Laplacian} \propto \text{Average of Neighbors} - \text{Current Point} $$
+
+        <h3>The Summary</h3>
+        <p>You don't need heavy calculus in your code because the calculus cancels itself out. When you try to calculate the continuous second derivative (curvature) on a discrete grid, the algebraic result is literally just the difference between the point and the average of its neighbors. By running a simple arithmetic loop across all vertices in a 3D structure, you are mathematically executing a massive, system-wide calculus operation without actually doing any calculus.</p>
+
+    </div>
+
+    <script>
+        const ROWS = 20;
+        const COLS = 20;
+        let grid = [];
+        let isPlaying = false;
+        let playInterval;
+        let isDrawing = false;
+        let currentDrawValue = 100;
+        let iterationCount = 0;
+
+        const gridElement = document.getElementById('grid');
+        const statusDisplay = document.getElementById('statusDisplay');
+        const iterationDisplay = document.getElementById('iterationDisplay');
+        const iconPlay = document.getElementById('icon-play');
+        const iconPause = document.getElementById('icon-pause');
+
+        function initGrid() {
+            grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            iterationCount = 0;
+            updateDashboard();
+            renderGrid();
+        }
+
+        function setDrawValue(val, element) {
+            currentDrawValue = val;
+            document.querySelectorAll('.radio-label').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        function getColor(value) {
+            if (value <= 0) return '#1a1a1a';
+            let val = Math.max(0, Math.min(100, value));
+            let r, g, b;
+            if (val <= 50) {
+                let pct = val / 50;
+                r = Math.floor(26 + pct * (49 - 26));
+                g = Math.floor(26 + pct * (130 - 26));
+                b = Math.floor(26 + pct * (206 - 26));
+            } else {
+                let pct = (val - 50) / 50;
+                r = Math.floor(49 + pct * (255 - 49));
+                g = Math.floor(130 + pct * (255 - 130));
+                b = Math.floor(206 + pct * (255 - 206));
+            }
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function renderGrid() {
+            gridElement.innerHTML = '';
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    let cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.style.backgroundColor = getColor(grid[r][c]);
+                    cell.onmousedown = (e) => { e.preventDefault(); isDrawing = true; applyDraw(r, c); };
+                    cell.onmouseenter = () => { if (isDrawing) applyDraw(r, c); };
+                    cell.onmouseup = () => { isDrawing = false; };
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        document.addEventListener('mouseup', () => { isDrawing = false; });
+
+        function applyDraw(r, c) {
+            grid[r][c] = Math.min(100, grid[r][c] + currentDrawValue);
+            renderGrid();
+        }
+
+        function resetGrid() {
+            if (isPlaying) togglePlay();
+            initGrid();
+        }
+
+        function updateDashboard() {
+            iterationDisplay.innerText = iterationCount;
+            statusDisplay.innerText = isPlaying ? "Active" : "Idle";
+            statusDisplay.style.color = isPlaying ? "#4ade80" : "#ccc";
+        }
+
+        function stepSimulation() {
+            let nextGrid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            let isCompletelyFlat = true;
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    let sum = 0;
+                    let neighbors = 0;
+
+                    if (r > 0) { sum += grid[r-1][c]; neighbors++; }
+                    if (r < ROWS - 1) { sum += grid[r+1][c]; neighbors++; }
+                    if (c > 0) { sum += grid[r][c-1]; neighbors++; }
+                    if (c < COLS - 1) { sum += grid[r][c+1]; neighbors++; }
+
+                    let average = sum / neighbors;
+                    let laplacian = average - grid[r][c];
+                    
+                    nextGrid[r][c] = grid[r][c] + (laplacian * 0.4);
+
+                    if (nextGrid[r][c] > 0.5) isCompletelyFlat = false;
+                }
+            }
+
+            grid = nextGrid;
+            iterationCount++;
+            updateDashboard();
+            renderGrid();
+
+            if (isCompletelyFlat && isPlaying) {
+                togglePlay(); 
+            }
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            updateDashboard();
+            
+            if (isPlaying) {
+                iconPlay.style.display = 'none';
+                iconPause.style.display = 'block';
+                playInterval = setInterval(stepSimulation, 25);
+            } else {
+                iconPlay.style.display = 'block';
+                iconPause.style.display = 'none';
+                clearInterval(playInterval);
+            }
+        }
+
+        initGrid();
+    </script>
+
+<footer>
+        VoidX Initiative © 2026. Architected and maintained by <a href="about_me.html">Krishnanand</a>. <br>
+        <span style="font-size: 0.85rem; opacity: 0.7; display: block; margin-top: 10px;">Built for the advancement of open-source AI education.</span>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoidX Initiative | Singular Value Decomposition</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --brand-accent: #00f0ff;
+            --brand-dark: #020617;
+            --surface-color: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body, html { margin: 0; padding: 0; background-color: var(--brand-dark); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-x: hidden; line-height: 1.8; }
+        .grid-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -10; background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 50px 50px; }
+        nav { padding: 30px 5vw; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; letter-spacing: 2px; text-decoration: none; }
+        .logo span { color: var(--brand-accent); }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+        .back-link:hover { color: var(--brand-accent); }
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 5vw; }
+
+        h1 { font-family: 'Space Grotesk', sans-serif; font-size: 3.5rem; font-weight: 700; margin: 0 0 20px 0; line-height: 1.1; letter-spacing: -1px; }
+        h2 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: var(--brand-accent); margin-top: 60px; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 10px; }
+        h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; color: #fff; margin-top: 40px; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 10px;}
+        h5 { font-family: 'Space Grotesk', sans-serif; font-size: 2.3rem; color: #f4a920; margin-top: 30px; margin-bottom: 20px;}
+        p, li { font-size: 1.15rem; color: var(--text-muted); margin-bottom: 25px; }
+        strong { color: #fff; }
+        .mjx-chtml { color: #f0ae9de2 !important; margin: 20px 0; }
+
+        .author-byline { display: flex; align-items: center; gap: 15px; margin-top: -10px; margin-bottom: 50px; padding-bottom: 30px; border-bottom: 1px solid rgba(0, 240, 255, 0.1); }
+        .author-avatar { width: 50px; height: 50px; border-radius: 50%; background-color: #1e293b; border: 2px solid rgba(0, 240, 255, 0.3); object-fit: cover; }
+        .author-info { display: flex; flex-direction: column; }
+        .author-name { color: #fff; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.1rem; text-decoration: none; transition: color 0.3s; }
+        .author-name:hover { color: var(--brand-accent); }
+        .author-meta { color: var(--text-muted); font-size: 0.85rem; letter-spacing: 0.5px; }
+
+        /* --- REUSABLE COMPONENTS (For Videos & Widgets) --- */
+        .reference-section {
+            margin: 60px 0; padding: 30px; background: rgba(0, 240, 255, 0.02);
+            border-radius: 12px; border: 1px solid rgba(0, 240, 255, 0.1);
+        }
+        .video-wrapper {
+            position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+            border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 20px;
+        }
+        .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        /* --- SVD SIMULATION STYLES --- */
+        .sim-wrapper { background: #0a0a0a; padding: 40px; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05); border: 1px solid rgba(0, 240, 255, 0.2); margin-top: 40px; margin-bottom: 40px; }
+        .sim-layout { display: flex; gap: 40px; align-items: center; justify-content: center; flex-wrap: wrap; }
+        input[type="number"] { width: 100%; background: #222; border: 1px solid #444; color: white; padding: 10px; border-radius: 6px; font-size: 1.1rem; text-align: center; box-sizing: border-box; transition: 0.3s; }
+        input[type="number"]:focus { outline: none; border-color: var(--brand-accent); }
+        input[type="range"] { width: 100%; cursor: pointer; accent-color: var(--brand-accent); }
+        .matrices-output { font-family: monospace; background: #000; padding: 15px; border-radius: 8px; border: 1px solid #333; }
+        .matrix-row { margin-bottom: 10px; color: #fff; line-height: 1.4;}
+        .matrix-title { color: #888; margin-bottom: 5px; font-size: 0.9rem; font-family: 'Space Grotesk';}
+
+        footer { padding: 50px 5vw; text-align: center; color: var(--text-muted); font-size: 0.95rem; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 80px; background: rgba(2, 6, 23, 0.8); }
+        footer a { color: var(--brand-accent); text-decoration: none; font-weight: 600; transition: 0.3s; }
+        footer a:hover { text-shadow: 0 0 10px rgba(0, 240, 255, 0.5); }
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+
+    <nav>
+        <a href="index.html" class="logo">VoidX <span>Initiative</span></a>
+        <a href="index.html" class="back-link">← Back to Hub</a>
+    </nav>
+
+    <div class="container">
+        <h1>SINGULAR VALUE DECOMPOSITION</h1>
+        
+        <div class="author-byline">
+            <img src="your-profile-pic.jpg" alt="Krishnanand" class="author-avatar" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%2394a3b8\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'">
+            <div class="author-info">
+                <a href="about_me.html" class="author-name">By Krishnanand</a>
+                <span class="author-meta">Lead Architect, VoidX Initiative</span>
+            </div>
+        </div>
+
+        <h5>Hey learner!</h5>
+        <p>Imagine you have a complex, messy spreadsheet of data—like a giant list of users and the movies they've rated. SVD is like a magical filter that un-mixes that complicated data to find the hidden, simple patterns underneath. If you think of your data as a baked cake, SVD tells you exactly how much flour, sugar, and eggs went into it.</p>
+
+        <h2>The 3-Step "Rotate, Stretch, Rotate" Rule</h2>
+        <p>In math, we usually use grids of numbers called matrices to change or transform data (like squishing or rotating a 3D object). SVD proves that any complex transformation, no matter how messy, can always be broken down into three simple, basic steps:</p>
+        <ul>
+            <li><strong>Rotate:</strong> Spin the object to line it up perfectly.</li>
+            <li><strong>Stretch (or Squish):</strong> Pull it or push it along its straight edges to change its size.</li>
+            <li><strong>Rotate Again:</strong> Spin it one last time into its final position.</li>
+        </ul>
+        <p>SVD takes a giant, complicated math problem and splits it into those three separate pieces. The middle step (the "Stretch") gives us the Singular Values. These values are essentially a ranked list of what is most important in your data.</p>
+
+        <div class="sim-wrapper">
+            <h2 style="text-align: center; font-size: 1.5rem; margin-top: 0; color: #fff; font-family: 'Space Grotesk'; border-bottom: none;">SVD Interactive Visualizer</h2>
+            <div style="text-align: center; font-size: 0.8rem; letter-spacing: 2px; color: #aaa; margin-bottom: 30px;">THE ANATOMY OF TRANSFORMATION</div>
+
+            <div class="sim-layout">
+                
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <canvas id="canvas" width="400" height="400" style="background: #111; border: 1px solid #333; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);"></canvas>
+                    <div id="step_text" style="text-align: center; font-weight: bold; color: var(--brand-accent); margin-top: 15px; font-family: 'Space Grotesk';">Original State</div>
+                </div>
+                
+                <div style="flex: 1; min-width: 280px; max-width: 400px;">
+                    
+                    <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px;">
+                        <div class="matrix-title">Transformation Matrix (A)</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <input type="number" id="m_a" value="1" step="0.1">
+                            <input type="number" id="m_b" value="1" step="0.1">
+                            <input type="number" id="m_c" value="0" step="0.1">
+                            <input type="number" id="m_d" value="2" step="0.1">
+                        </div>
+                    </div>
+
+                    <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px;">
+                        <div class="matrix-title">Transformation Phase (t)</div>
+                        <input type="range" id="t_slider" min="0" max="3" step="0.01" value="0">
+                    </div>
+
+                    <div class="matrices-output" id="output">
+                        </div>
+
+                </div>
+            </div>
+        </div>
+
+        <h2>Why is SVD so useful?</h2>
+        <p>Because SVD ranks what is most important, it is the secret engine behind a lot of everyday technology:</p>
+        <ul>
+            <li><strong>Image Compression:</strong> SVD looks at a high-quality photo and says, "These 10% of pixels hold the core shape, and the rest is just minor details." It throws away the details to shrink the file size, but keeps the photo looking mostly the same.</li>
+            <li><strong>Recommendation Systems:</strong> It looks at millions of user ratings and uses SVD to find hidden themes (e.g., "This person likes sci-fi with strong female leads") to recommend your next movie.</li>
+            <li><strong>Noise Reduction:</strong> It separates the "loud, important signal" (the main thing you are trying to measure) from the "quiet, random noise" (errors in the data) so you can throw the noise away.</li>
+        </ul>
+        <p>In short, SVD is a mathematical tool that breaks complicated data down into its simplest, most important building blocks so we can actually understand and use it.</p>
+        
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 60px 0;">
+
+        <h2>The Fundamental Equation</h2>
+        <p>At its core, SVD is a factorization theorem for real or complex matrices. It states that every matrix, whether square or rectangular, can be factored into a product of three specific matrices. For any \(m \times n\) matrix \(A\), its Singular Value Decomposition is written as:</p>
+        $$A = U \Sigma V^T$$
+        <p>Let us deconstruct each component of this equation:</p>
+
+        <h3>1. The Matrix \(U\) (Left Singular Vectors)</h3>
+        <p>\(U\) is an \(m \times m\) orthogonal matrix (or unitary matrix, if the data contains complex numbers).</p>
+        <ul>
+            <li><strong>Mathematical property:</strong> \(U^T U = I\) (where \(I\) is the identity matrix). This means the columns of \(U\) are mutually perpendicular unit vectors.</li>
+            <li><strong>Geometric meaning:</strong> Multiplying by \(U\) represents a pure rotation (or reflection) in the target \(m\)-dimensional space. It does not stretch or shrink anything.</li>
+            <li><strong>Derivation:</strong> The columns of \(U\), known as the left singular vectors, are the eigenvectors of the matrix \(AA^T\).</li>
+        </ul>
+
+        <h3>2. The Matrix \(\Sigma\) (Singular Values)</h3>
+        <p>\(\Sigma\) (Sigma) is an \(m \times n\) diagonal matrix.</p>
+        <ul>
+            <li><strong>Mathematical property:</strong> All non-diagonal entries are zero. The diagonal entries, denoted as \(\sigma_i\), are the singular values of \(A\). By convention, they are always real, non-negative, and sorted in descending order (\(\sigma_1 \geq \sigma_2 \geq \dots \geq \sigma_r > 0\)).</li>
+            <li><strong>Geometric meaning:</strong> Multiplying by \(\Sigma\) represents scaling (stretching or squishing) along the coordinate axes. The magnitude of each \(\sigma_i\) dictates the "strength" or variance of the data along that specific dimension.</li>
+            <li><strong>Derivation:</strong> The singular values are the square roots of the non-zero eigenvalues of both \(A^T A\) and \(AA^T\).</li>
+        </ul>
+
+        <h3>3. The Matrix \(V^T\) (Right Singular Vectors)</h3>
+        <p>\(V^T\) is the transpose of an \(n \times n\) orthogonal matrix \(V\).</p>
+        <ul>
+            <li><strong>Mathematical property:</strong> Similar to \(U\), \(V^T V = I\) and \(V V^T = I\). Its rows (or the columns of \(V\)) are mutually perpendicular unit vectors.</li>
+            <li><strong>Geometric meaning:</strong> Multiplying by \(V^T\) represents an initial rotation (or reflection) in the original \(n\)-dimensional space.</li>
+            <li><strong>Derivation:</strong> The columns of \(V\), known as the right singular vectors, are the eigenvectors of the matrix \(A^T A\).</li>
+        </ul>
+        <div class="reference-section">
+            <h3 style="border-bottom: none;">Visualizing the Transformation</h3>
+            <p> Watch this elegant animation by Visual Kernel. It perfectly bridges the gap between the raw matrix math and the geometric reality of Rotate → Stretch → Rotate.</p>
+            <div class="video-wrapper">
+                <iframe 
+                    src="https://www.youtube.com/embed/vSczTbgc8Rc" 
+                    title="SVD Visualized" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </div>
+        
+        
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        const SCALE = 50; 
+
+        const inputs = ['m_a', 'm_b', 'm_c', 'm_d'].map(id => document.getElementById(id));
+        const slider = document.getElementById('t_slider');
+        const stepText = document.getElementById('step_text');
+        const outputDiv = document.getElementById('output');
+
+        inputs.forEach(input => input.addEventListener('input', draw));
+        slider.addEventListener('input', draw);
+
+        function formatMatrix(name, m, isDiagonal = false) {
+            if (isDiagonal) {
+                return `<div class="matrix-row"><span style="color:#00f0ff">${name}</span> = <br>[${m[0].toFixed(2)}, 0.00]<br>[0.00, ${m[1].toFixed(2)}]</div>`;
+            }
+            return `<div class="matrix-row"><span style="color:#00f0ff">${name}</span> = <br>[${m[0][0].toFixed(2)}, ${m[0][1].toFixed(2)}]<br>[${m[1][0].toFixed(2)}, ${m[1][1].toFixed(2)}]</div>`;
+        }
+
+        function computeSVD(a, b, c, d) {
+            const E = a * a + c * c;
+            const F = a * b + c * d;
+            const G = b * b + d * d;
+
+            const T = E + G;
+            const D = E * G - F * F;
+            const diff = Math.sqrt(Math.max(0, T * T - 4 * D));
+
+            let l1 = (T + diff) / 2;
+            let l2 = (T - diff) / 2;
+
+            let s1 = Math.sqrt(Math.max(0, l1));
+            let s2 = Math.sqrt(Math.max(0, l2));
+
+            let v1x, v1y, v2x, v2y;
+            if (Math.abs(F) < 1e-9) {
+                v1x = 1; v1y = 0;
+                v2x = 0; v2y = 1;
+            } else {
+                v1x = F;
+                v1y = l1 - E;
+                let mag = Math.sqrt(v1x * v1x + v1y * v1y);
+                v1x /= mag;
+                v1y /= mag;
+                v2x = -v1y;
+                v2y = v1x;
+            }
+
+            let u1x, u1y, u2x, u2y;
+            if (s1 > 1e-9) {
+                u1x = (a * v1x + b * v1y) / s1;
+                u1y = (c * v1x + d * v1y) / s1;
+            } else {
+                u1x = 1; u1y = 0;
+            }
+
+            if (s2 > 1e-9) {
+                u2x = (a * v2x + b * v2y) / s2;
+                u2y = (c * v2x + d * v2y) / s2;
+            } else {
+                u2x = -u1y; u2y = u1x;
+            }
+
+            return {
+                U: [[u1x, u2x], [u1y, u2y]],
+                S: [s1, s2],
+                V: [[v1x, v2x], [v1y, v2y]]
+            };
+        }
+
+        function transformPoint(p, t, svd) {
+            let p0 = { x: p.x, y: p.y };
+            
+            let p1 = {
+                x: svd.V[0][0] * p0.x + svd.V[1][0] * p0.y,
+                y: svd.V[0][1] * p0.x + svd.V[1][1] * p0.y
+            };
+            
+            let p2 = {
+                x: svd.S[0] * p1.x,
+                y: svd.S[1] * p1.y
+            };
+            
+            let p3 = {
+                x: svd.U[0][0] * p2.x + svd.U[0][1] * p2.y,
+                y: svd.U[1][0] * p2.x + svd.U[1][1] * p2.y
+            };
+
+            if (t <= 1) {
+                return { x: p0.x + (p1.x - p0.x) * t, y: p0.y + (p1.y - p0.y) * t };
+            } else if (t <= 2) {
+                let dt = t - 1;
+                return { x: p1.x + (p2.x - p1.x) * dt, y: p1.y + (p2.y - p1.y) * dt };
+            } else {
+                let dt = t - 2;
+                return { x: p2.x + (p3.x - p2.x) * dt, y: p2.y + (p3.y - p2.y) * dt };
+            }
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let x = 0; x <= width; x += SCALE) {
+                ctx.moveTo(x, 0); ctx.lineTo(x, height);
+            }
+            for (let y = 0; y <= height; y += SCALE) {
+                ctx.moveTo(0, y); ctx.lineTo(width, y);
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height);
+            ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2);
+            ctx.stroke();
+        }
+
+        function drawVector(p, color, label) {
+            const screenX = width / 2 + p.x * SCALE;
+            const screenY = height / 2 - p.y * SCALE; 
+
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 3;
+
+            ctx.beginPath();
+            ctx.moveTo(width / 2, height / 2);
+            ctx.lineTo(screenX, screenY);
+            ctx.stroke();
+
+            const angle = Math.atan2(-p.y, p.x);
+            ctx.beginPath();
+            ctx.moveTo(screenX, screenY);
+            ctx.lineTo(screenX - 10 * Math.cos(angle - Math.PI / 6), screenY - 10 * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(screenX - 10 * Math.cos(angle + Math.PI / 6), screenY - 10 * Math.sin(angle + Math.PI / 6));
+            ctx.fill();
+        }
+
+        function draw() {
+            const a = parseFloat(inputs[0].value) || 0;
+            const b = parseFloat(inputs[1].value) || 0;
+            const c = parseFloat(inputs[2].value) || 0;
+            const d = parseFloat(inputs[3].value) || 0;
+            const t = parseFloat(slider.value);
+
+            if (t === 0) stepText.innerText = "Original State (Identity)";
+            else if (t <= 1) stepText.innerText = `Step 1: First Rotation (V^T) [${Math.round(t*100)}%]`;
+            else if (t <= 2) stepText.innerText = `Step 2: Stretch (Sigma) [${Math.round((t-1)*100)}%]`;
+            else if (t < 3) stepText.innerText = `Step 3: Final Rotation (U) [${Math.round((t-2)*100)}%]`;
+            else stepText.innerText = "Final State (A = U * Sigma * V^T)";
+
+            const svd = computeSVD(a, b, c, d);
+
+            outputDiv.innerHTML = 
+                formatMatrix("U", svd.U) +
+                formatMatrix("&Sigma; (Sigma)", svd.S, true) +
+                formatMatrix("V^T", [[svd.V[0][0], svd.V[1][0]], [svd.V[0][1], svd.V[1][1]]]);
+
+            ctx.clearRect(0, 0, width, height);
+            drawGrid();
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i <= 100; i++) {
+                const angle = (i / 100) * 2 * Math.PI;
+                const p = { x: Math.cos(angle), y: Math.sin(angle) };
+                const tP = transformPoint(p, t, svd);
+                
+                const screenX = width / 2 + tP.x * SCALE;
+                const screenY = height / 2 - tP.y * SCALE;
+
+                if (i === 0) ctx.moveTo(screenX, screenY);
+                else ctx.lineTo(screenX, screenY);
+            }
+            ctx.stroke();
+
+            let v_i = transformPoint({ x: 1, y: 0 }, t, svd);
+            let v_j = transformPoint({ x: 0, y: 1 }, t, svd);
+            drawVector(v_i, '#ff4757', 'i'); 
+            drawVector(v_j, '#50fa7b', 'j'); 
+        }
+
+        draw();
+    </script>
+
+    <footer>
+        VoidX Initiative © 2026. Architected and maintained by <a href="about_me.html">Krishnanand</a>. <br>
+        <span style="font-size: 0.85rem; opacity: 0.7; display: block; margin-top: 10px;">Built for the advancement of open-source AI education.</span>
+    </footer>
+
+</body>
+</html>

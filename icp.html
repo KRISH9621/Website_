@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoidX Initiative | Iterative Closest Point</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --brand-accent: #00f0ff;
+            --brand-dark: #020617;
+            --surface-color: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background-color: var(--brand-dark); color: var(--text-main);
+            font-family: 'Inter', sans-serif; overflow-x: hidden;
+            line-height: 1.8;
+        }
+
+        .grid-bg { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -10;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 5vw; }
+        
+        nav { padding: 30px 5vw; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; letter-spacing: 2px; text-decoration: none; }
+        .logo span { color: var(--brand-accent); }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+        .back-link:hover { color: var(--brand-accent); }
+
+        h1 { font-family: 'Space Grotesk', sans-serif; font-size: 3.5rem; font-weight: 700; margin: 0 0 20px 0; line-height: 1.1; letter-spacing: -1px; }
+        h2 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: var(--brand-accent); margin-top: 60px; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 10px; }
+        h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; color: #fff; margin-top: 40px; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 10px;}
+        h4 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; color: #fff; margin-top: 10px; margin-bottom: 20px;  }
+        h5 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: #f4a920; margin-top: 30px; margin-bottom: 20px;}
+        
+        p, li { font-size: 1.15rem; color: var(--text-muted); margin-bottom: 25px; }
+        strong { color: #fff; }
+        .mjx-chtml { color: #f0ae9de2 !important; margin: 20px 0; }
+
+        .author-byline { display: flex; align-items: center; gap: 15px; margin-top: -10px; margin-bottom: 50px; padding-bottom: 30px; border-bottom: 1px solid rgba(0, 240, 255, 0.1); }
+        .author-avatar { width: 50px; height: 50px; border-radius: 50%; background-color: #1e293b; border: 2px solid rgba(0, 240, 255, 0.3); object-fit: cover; }
+        .author-info { display: flex; flex-direction: column; }
+        .author-name { color: #fff; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.1rem; text-decoration: none; transition: color 0.3s; }
+        .author-name:hover { color: var(--brand-accent); }
+        .author-meta { color: var(--text-muted); font-size: 0.85rem; letter-spacing: 0.5px; }
+
+        /* --- VISUAL EXAMPLE IMAGE (FIXED) --- */
+        .example-image {
+            width: 100%;
+            max-width: 500px;
+            max-height: 50vh;
+            object-fit: contain;
+            margin: 40px auto;
+            display: block;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        /* --- VIDEO EMBED STYLES --- */
+        .reference-section { margin: 60px 0; padding: 30px; background: rgba(0, 240, 255, 0.02); border-radius: 12px; border: 1px solid rgba(0, 240, 255, 0.1); }
+        .reference-section h3 { margin-top: 0; }
+        .video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 20px; }
+        .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        /* --- DICTIONARY GRID --- */
+        .dictionary-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 30px; }
+        .dict-card { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; display: flex; gap: 20px; align-items: center;}
+        .dict-math { font-size: 1.5rem; color: var(--brand-accent); min-width: 60px; text-align: center; font-weight: bold;}
+        .dict-text h4 { margin: 0 0 5px 0; font-size: 1.1rem; color: #fff; border: none; padding: 0;}
+        .dict-text p { margin: 0; font-size: 0.95rem; line-height: 1.5; }
+
+        /* --- SIMULATION MOUNT POINT --- */
+        .simulation-container {
+            width: 100%; min-height: 500px; margin: 60px 0;
+            background: rgba(0, 240, 255, 0.02); border: 1px dashed rgba(0, 240, 255, 0.3);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            color: var(--brand-accent); font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem;
+            letter-spacing: 2px; box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        footer { padding: 50px 5vw; text-align: center; color: var(--text-muted); font-size: 0.95rem; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 80px; background: rgba(2, 6, 23, 0.8); }
+        footer a { color: var(--brand-accent); text-decoration: none; font-weight: 600; transition: 0.3s; }
+        footer a:hover { text-shadow: 0 0 10px rgba(0, 240, 255, 0.5); }
+    </style>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+
+    <nav>
+        <a href="index.html" class="logo">VoidX <span>Initiative</span></a>
+        <a href="index.html" class="back-link">← Back to Modules</a>
+    </nav>
+
+    <div class="container">
+        <h1>ITERATIVE CLOSEST POINT ~The Algebra of Alignment</h1>
+        
+        <div class="author-byline">
+            <img src="your-profile-pic.jpg" alt="Krishnanand" class="author-avatar" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%2394a3b8\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'">
+            <div class="author-info">
+                <a href="about_me.html" class="author-name">By Krishnanand</a>
+                <span class="author-meta">26th MAY</span>
+            </div>
+        </div>
+
+        <h5>Hey learner!</h5>
+        <p>Imagine you have a real physical knife, and next to it is a paper cutout carved into that exact same shape. Your goal is to place the paper cutout perfectly over the real knife so their edges line up exactly. But you have your eyes closed, and you can only make small adjustments based on feel.</p>
+        
+        <img src="icp.jpeg" alt="Real knife and paper cutout alignment example" class="example-image">
+
+        <p>Here is how you would use the "ICP" method to align them:</p>
+        <ul>
+            <li><strong>Iterative (Repeat):</strong> You know you won't get it right on the first try. You will have to make a small adjustment, check it, and repeat the process until it fits.</li>
+            <li><strong>Closest Point:</strong> You pick three or four points on the edge of your paper cutout. You feel around for the absolute closest edge of the real knife to each of those points.</li>
+            <li><strong>The Move:</strong> Once you find those closest edges, you shift and twist the paper cutout just a little bit in that direction to bring those specific points closer together.</li>
+        </ul>
+        <p>Because you shifted the cutout, your points are in a new location. So, you start over. You find the new closest edges, and you shift and twist again. Every time you repeat this loop, the cutout gets closer and closer until it magically snaps perfectly into place over the real knife.</p>
+
+        
+
+        <div class="sim-wrapper" style="background: #0a0a0a; padding: 40px; border-radius: 12px; border: 1px solid rgba(0, 240, 255, 0.2); box-shadow: inset 0 0 50px rgba(0,0,0,0.5); margin: 60px 0;">
+            <h2 style="text-align: center; font-size: 1.5rem; margin-top: 0; color: #fff;">2D ICP Alignment Engine</h2>
+            <div style="text-align: center; font-size: 0.8rem; letter-spacing: 2px; color: #aaa; margin-bottom: 30px;">OBSERVE SVD MATHEMATICS IN REAL-TIME</div>
+
+            <div style="display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; align-items: center;">
+                
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <canvas id="icp-canvas" width="350" height="350" style="background: #111; border: 1px solid #333; border-radius: 8px;"></canvas>
+                </div>
+                
+                <div style="flex: 1; min-width: 280px;">
+                    <div style="display: flex; justify-content: space-around; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 20px 0; margin-bottom: 30px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 12px; color: #888; font-family: 'Space Grotesk', sans-serif;">ITERATION</div>
+                            <div id="icp-iter" style="font-size: 24px; font-family: monospace; color: #fff;">0</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 12px; color: #888; font-family: 'Space Grotesk', sans-serif;">MEAN SQUARED ERROR</div>
+                            <div id="icp-mse" style="font-size: 24px; font-family: monospace; color: #f4a920;">0.00</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <button onclick="stepICP()" style="background: #fff; color: #000; padding: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; font-family: 'Space Grotesk'; font-size: 1rem; transition: 0.3s;">[ Step Iteration ]</button>
+                        <button id="auto-btn" onclick="toggleAutoICP()" style="background: #333; color: #fff; padding: 12px; border-radius: 4px; border: none; cursor: pointer; font-family: 'Space Grotesk'; transition: 0.3s;">[ Auto Run ]</button>
+                        <button onclick="resetICP()" style="background: transparent; color: #ff1a40; padding: 12px; border-radius: 4px; border: 1px solid #ff1a40; cursor: pointer; font-family: 'Space Grotesk'; transition: 0.3s;">[ Randomize & Reset ]</button>
+                    </div>
+                    
+                    <div style="margin-top: 25px; font-size: 0.85rem; color: #888; line-height: 1.6;">
+                        <span style="color: #00f0ff;">■ Target Cloud (Stationary)</span><br>
+                        <span style="color: #f4a920;">■ Source Cloud (Moving)</span><br>
+                        <span style="font-size: 0.75rem;">Faint lines indicate nearest-neighbor matching pairs.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p>The source cloud gets failed in complete superimpose because of the limiations of ICP. Here is an another simulation to make you understand better:
+            <a href="icp_simulation.html"><strong> simulation</strong> </a> </p>
+        <h2>The ICP Mathematical Dictionary</h2>
+        <p>When you look at an academic paper or a textbook on ICP, these are the standard variables you will encounter.</p>
+
+        <div class="dictionary-grid">
+            <div class="dict-card"><div class="dict-math">\(P, Q\)</div><div class="dict-text"><h4>The Point Clouds</h4><p><strong>P</strong> is the Source Point Cloud. This is the entire set of points you want to move. <strong>Q</strong> is the Target Point Cloud. This is the stationary set of points you are trying to match against.</p></div></div>
+            <div class="dict-card"><div class="dict-math">\(p_i, q_i\)</div><div class="dict-text"><h4>The Specific Points</h4><p><strong>p_i</strong> is a single Source Point. The \(i\) represents the index (e.g., point number 1, point number 2). <strong>q_i</strong> is the corresponding Target Point. This is the specific point in \(Q\) that is currently closest to \(p_i\).</p></div></div>
+            <div class="dict-card"><div class="dict-math">\(R, t\)</div><div class="dict-text"><h4>The Transformation</h4><p><strong>R</strong> is the Rotation Matrix. A \(3 \times 3\) grid of numbers that describes how to tilt and turn the source cloud in 3D space. <strong>t</strong> is the Translation Vector. A \(3 \times 1\) column of numbers \((x, y, z)\) that describes how far to slide the source cloud up/down, left/right, and forward/backward.</p></div></div>
+            <div class="dict-card"><div class="dict-math">\(\mu\)</div><div class="dict-text"><h4>The Centroids</h4><p>\(\mu_p\) and \(\mu_q\) are the mathematical centers of mass for cloud \(P\) and cloud \(Q\).</p></div></div>
+            <div class="dict-card"><div class="dict-math">\(H\)</div><div class="dict-text"><h4>Cross-Covariance Matrix</h4><p>This is the matrix that compares the "spread" or "shape" of the centered source points against the centered target points.</p></div></div>
+            <div class="dict-card"><div class="dict-math">\(U, \Sigma, V\)</div><div class="dict-text"><h4>SVD Matrices</h4><p>When we break apart (decompose) the \(H\) matrix to find the optimal rotation, it splits into these three matrices. \(U\) and \(V\) handle the rotational directions, and \(\Sigma\) (Sigma) handles the scale (which we ignore in rigid ICP).</p></div></div>
+            <div class="dict-card"><div class="dict-math">\(E\)</div><div class="dict-text"><h4>Error Function (MSE)</h4><p>This represents the average physical distance between all matched points. The goal of the algorithm is to make \(E\) as small as possible.</p></div></div>
+        </div>
+
+        <h2>The Mathematical Engine</h2>
+        <p>To understand the mathematics of ICP, we have to look at it as an optimization problem. When you are processing raw vertices to extract clean structures for a web viewer or an API, you are essentially dealing with two massive arrays of 3D coordinates.</p>
+        
+        <p>Let’s define our two sets of points.</p>
+        <ul>
+            <li><strong>Source Cloud (\(P\)):</strong> The mesh you want to move. It has points \(P = \{p_1, p_2, ..., p_n\}\).</li>
+            <li><strong>Target Cloud (\(Q\)):</strong> The stationary reference mesh. It has points \(Q = \{q_1, q_2, ..., q_m\}\).</li>
+        </ul>
+        <p>Our ultimate goal is to find a \(3 \times 3\) Rotation Matrix (\(R\)) and a \(3 \times 1\) Translation Vector (\(t\)) that minimizes the overall distance between the two point clouds. Here is the step-by-step mathematical breakdown of exactly what happens in a single iteration of the loop.</p>
+
+        <h3>Step 1: Finding Correspondences (The Bottleneck)</h3>
+        <p>Before we can align anything, we need to pair up the points. For every point \(p_i\) in the source cloud \(P\), we must find the single nearest neighbor \(q_i\) in the target cloud \(Q\). The mathematical objective is to minimize the Euclidean distance:</p>
+        $$q_i = \arg\min_{q \in Q} ||p_i - q||^2$$
+        
+        <p><strong>Performance Note:</strong> Doing this via brute force requires checking every point against every other point, which results in a massive \(O(n^2)\) time complexity. For a production-grade backend engine, this step is almost always optimized using spatial data structures like  <a href="kd_tree.html"><strong>KD-Trees</strong> </a>, which brings the search time down to \(O(n \log n)\). This is often where developers drop down to C or C++ to handle the heavy memory lifting.</p>
+
+        <h3>Step 2: The Objective Function</h3>
+        <p>Now that we have matched pairs \((p_i, q_i)\), we want to find the rigid transformation (rotation \(R\) and translation \(t\)) that minimizes the <a href="MSE.html"><strong>Mean Squared Error (MSE)</strong> </a> across all matched pairs:</p>
+        $$E(R, t) = \frac{1}{n} \sum_{i=1}^{n} ||q_i - (R p_i + t)||^2$$
+        <p>To solve this equation efficiently without trial and error, we use a beautiful piece of linear algebra known as <a href="svd.html"><strong>Singular Value Decomposition </strong> </a> to solve the Orthogonal Procrustes problem.</p>
+
+        <h3>Step 3: Solving for Rotation and Translation via SVD</h3>
+        <p>To isolate the rotation from the translation, we shift both point clouds so that their centers of mass (centroids) sit exactly at the origin \((0,0,0)\).</p>
+        
+        <p><strong>1. Calculate the Centroids:</strong></p>
+        $$\bar{p} = \frac{1}{n} \sum_{i=1}^{n} p_i \quad \text{and} \quad \bar{q} = \frac{1}{n} \sum_{i=1}^{n} q_i$$
+        
+        <p><strong>2. Center the Point Clouds:</strong> Subtract the centroids from every individual point:</p>
+        $$p'_i = p_i - \bar{p} \quad \text{and} \quad q'_i = q_i - \bar{q}$$
+        
+        <p><strong>3. Compute the Cross-Covariance Matrix (\(H\)):</strong> We multiply the centered source points by the transposed centered target points. This creates a \(3 \times 3\) matrix that encodes how the two shapes relate to each other in 3D space:</p>
+        $$H = \sum_{i=1}^{n} p'_i (q'_i)^T$$
+        
+        <p><strong>4. Apply Singular Value Decomposition:</strong> We decompose the covariance matrix \(H\) into three matrices:</p>
+        $$H = U \Sigma V^T$$
+        <p>Where \(U\) and \(V\) are orthogonal matrices, and \(\Sigma\) is a diagonal matrix of singular values.</p>
+
+        <p><strong>5. Extract the Rotation Matrix (\(R\)):</strong> The optimal rotation matrix to align the two clouds is simply:</p>
+        $$R = V U^T$$
+        <p><em>(Crucial check: If the determinant of \(R\) is negative (\(\det(R) = -1\)), the math has accidentally given us a reflection instead of a pure rotation. To fix this, we multiply the third column of \(V\) by -1 before calculating \(R\).)</em></p>
+
+        <p><strong>6. Extract the Translation Vector (\(t\)):</strong> Now that we have the rotation, we can easily find the translation by looking at how far apart the two original centroids are, factoring in our new rotation:</p>
+        $$t = \bar{q} - R \bar{p}$$
+
+        <h3>Step 4: Apply and Iterate</h3>
+        <p>We have our \(R\) and \(t\). We now update our original source point cloud by applying the transformation to every point:</p>
+        $$P_{new} = R P_{old} + t$$
+        <p>Because we only matched the <em>closest</em> points in Step 1 (not the <em>correct</em> points), \(P_{new}\) is closer, but not perfectly aligned. We check the new error \(E(R, t)\). If the error is still above a certain threshold, we feed \(P_{new}\) back into Step 1, find entirely new closest-point pairs, and do the matrix math all over again. The algorithm stops when the error hits zero, or when it stops improving.</p>
+        <div class="reference-section">
+            <h3>Visualizing the Algorithm</h3>
+            <p>If you want to see this process in action, this excellent breakdown by Computerphile demonstrates how ICP aligns complex 3D meshes using iterative matching and SVD.</p>
+            
+            <div class="video-wrapper">
+                <iframe 
+                    src="https://www.youtube.com/embed/4uWSo8v3iQA" 
+                    title="Iterative Closest Point (ICP) - Computerphile" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+            
+            <p style="font-size: 0.9rem; margin-top: 15px;">
+                <strong>Key Takeaways:</strong><br>
+                • [00:03:45] The iterative process: Match points, optimize rotation/translation, and repeat.<br>
+                • [00:06:18] The Local Minimum trap: Why a bad initial guess will cause the algorithm to fail.<br>
+                • [00:09:40] Using Singular Value Decomposition (SVD) to calculate the optimal rotation matrix.<br>
+                • [00:12:11] Real-world application: Stitching the famous Stanford Bunny mesh together in MeshLab.
+            </p>
+        </div>  
+        <h2>The Local Minima Trap</h2>
+        <p>ICP is a "greedy" algorithm. It only looks at the absolute closest point at any given millisecond. Because of this, it has a fatal flaw: if your paper cutout starts out completely upside down compared to the real knife, the algorithm might decide the shortest mathematical distance is to map the handle to the blade.</p>
+        <p>It gets trapped in a mathematical valley called a <a href="icp_simulation.html"><strong>Local Minimum</strong></a>. To use ICP effectively, you must give the computer a good "initial guess"—often by aligning the bounding boxes of the two shapes first—before you let the SVD matrix algebra take over.</p>
+
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 60px 0;">
+    </div>
+
+    <footer>
+        VoidX Initiative © 2026. Architected and maintained by <a href="about_me.html">Krishnanand</a>. <br>
+        <span style="font-size: 0.85rem; opacity: 0.7; display: block; margin-top: 10px;">Built for the advancement of open-source AI education.</span>
+    </footer>
+<script>
+        const canvas = document.getElementById('icp-canvas');
+        const ctx = canvas.getContext('2d');
+        let targetCloud = [];
+        let sourceCloud = [];
+        let matchedPairs = [];
+        let iteration = 0;
+        let autoInterval;
+
+        // Generates the base "C" shape structure
+        function generateTarget() {
+            targetCloud = [];
+            for(let i = 0; i <= Math.PI; i += Math.PI / 10) {
+                targetCloud.push({ x: 175 + Math.cos(i) * 80, y: 175 + Math.sin(i) * 80 });
+            }
+            targetCloud.push({x: 175 - 80, y: 175 - 40});
+            targetCloud.push({x: 175 - 80, y: 175 - 80});
+        }
+
+        // Randomly offsets and rotates the source cloud to simulate misalignment
+        function randomizeSource() {
+            sourceCloud = [];
+            const angle = (Math.random() - 0.5) * Math.PI; 
+            const tx = (Math.random() - 0.5) * 80; 
+            const ty = (Math.random() - 0.5) * 80;
+            const cx = 175, cy = 175;
+
+            targetCloud.forEach(p => {
+                const rx = Math.cos(angle) * (p.x - cx) - Math.sin(angle) * (p.y - cy) + cx;
+                const ry = Math.sin(angle) * (p.x - cx) + Math.cos(angle) * (p.y - cy) + cy;
+                sourceCloud.push({ x: rx + tx, y: ry + ty });
+            });
+        }
+
+        function resetICP() {
+            if (autoInterval) toggleAutoICP();
+            iteration = 0;
+            matchedPairs = [];
+            generateTarget();
+            randomizeSource();
+            draw();
+            updateDash(0);
+        }
+
+        function draw(showLines = true) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Matching Lines
+            if (showLines) {
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+                ctx.lineWidth = 1;
+                matchedPairs.forEach(pair => {
+                    ctx.beginPath();
+                    ctx.moveTo(sourceCloud[pair.s].x, sourceCloud[pair.s].y);
+                    ctx.lineTo(targetCloud[pair.t].x, targetCloud[pair.t].y);
+                    ctx.stroke();
+                });
+            }
+
+            // Draw Target (Neon Cyan)
+            ctx.fillStyle = "#00f0ff";
+            targetCloud.forEach(p => {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
+            });
+
+            // Draw Source (Gold/Orange)
+            ctx.fillStyle = "#f4a920";
+            sourceCloud.forEach(p => {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
+            });
+        }
+
+        function stepICP() {
+            matchedPairs = [];
+            let totalError = 0;
+
+            // STEP 1: Nearest Neighbor Matching
+            for (let i = 0; i < sourceCloud.length; i++) {
+                let sp = sourceCloud[i];
+                let minDist = Infinity;
+                let minIndex = -1;
+                
+                for (let j = 0; j < targetCloud.length; j++) {
+                    let tp = targetCloud[j];
+                    let dist = (sp.x - tp.x)**2 + (sp.y - tp.y)**2;
+                    if (dist < minDist) { minDist = dist; minIndex = j; }
+                }
+                matchedPairs.push({ s: i, t: minIndex });
+                totalError += minDist;
+            }
+
+            let mse = totalError / sourceCloud.length;
+            updateDash(mse);
+            draw(true); // Show the pairing lines
+
+            // STEP 2: Calculate Centroids
+            let p_mean = {x: 0, y: 0}, q_mean = {x: 0, y: 0};
+            matchedPairs.forEach(pair => {
+                p_mean.x += sourceCloud[pair.s].x; p_mean.y += sourceCloud[pair.s].y;
+                q_mean.x += targetCloud[pair.t].x; q_mean.y += targetCloud[pair.t].y;
+            });
+            let N = matchedPairs.length;
+            p_mean.x /= N; p_mean.y /= N; q_mean.x /= N; q_mean.y /= N;
+
+            // STEP 3: Cross-Covariance Matrix
+            let Sxx = 0, Sxy = 0, Syx = 0, Syy = 0;
+            matchedPairs.forEach(pair => {
+                let px = sourceCloud[pair.s].x - p_mean.x, py = sourceCloud[pair.s].y - p_mean.y;
+                let qx = targetCloud[pair.t].x - q_mean.x, qy = targetCloud[pair.t].y - q_mean.y;
+                Sxx += px * qx; Sxy += px * qy; Syx += py * qx; Syy += py * qy;
+            });
+
+            // STEP 4: Optimal Rotation (Analytic 2D SVD substitute)
+            let theta = Math.atan2(Sxy - Syx, Sxx + Syy);
+            let cosT = Math.cos(theta), sinT = Math.sin(theta);
+
+            // STEP 5: Apply Transformation
+            for (let i = 0; i < sourceCloud.length; i++) {
+                let px = sourceCloud[i].x - p_mean.x, py = sourceCloud[i].y - p_mean.y;
+                sourceCloud[i].x = (cosT * px - sinT * py) + q_mean.x;
+                sourceCloud[i].y = (sinT * px + cosT * py) + q_mean.y;
+            }
+
+            iteration++;
+            // Briefly show the lines, then redraw cleanly with the new positions
+            setTimeout(() => draw(false), 200);
+            
+            // Stop auto-run if perfectly converged
+            if (mse < 0.1 && autoInterval) toggleAutoICP(); 
+        }
+
+        function toggleAutoICP() {
+            const btn = document.getElementById('auto-btn');
+            if (autoInterval) {
+                clearInterval(autoInterval);
+                autoInterval = null;
+                btn.innerText = "[ Auto Run ]";
+                btn.style.background = "#333";
+                btn.style.color = "#fff";
+            } else {
+                autoInterval = setInterval(stepICP, 400);
+                btn.innerText = "[ Halt ]";
+                btn.style.background = "#fff";
+                btn.style.color = "#000";
+            }
+        }
+
+        function updateDash(mse) {
+            document.getElementById('icp-iter').innerText = iteration;
+            document.getElementById('icp-mse').innerText = (mse / 100).toFixed(2); // Scaled for readability
+        }
+
+        // Initialize on load
+        resetICP();
+    </script>
+</body>
+</html>

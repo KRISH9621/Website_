@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive MSE Visualizer - High Contrast</title>
+    <style>
+        /* Strict black background and high-contrast theme */
+        body {
+            background-color: #000000; 
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+        
+        p.subtitle {
+            color: #aaaaaa;
+            margin-bottom: 20px;
+        }
+
+        #mse-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #40c4ff; /* Bright blue instead of red */
+            margin-bottom: 5px;
+            text-shadow: 0 0 15px rgba(64, 196, 255, 0.4);
+            font-variant-numeric: tabular-nums;
+        }
+
+        #formula-display {
+            font-size: 1.2rem;
+            color: #ffffff;
+            margin-bottom: 20px;
+            font-family: monospace;
+        }
+
+        canvas {
+            background-color: #050505; /* Barely off-black for contrast */
+            border: 1px solid #333333;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(64, 196, 255, 0.1);
+            margin-bottom: 30px;
+            cursor: crosshair;
+        }
+
+        .controls {
+            display: flex;
+            gap: 30px;
+            background-color: #0a0a0a;
+            padding: 25px 40px;
+            border-radius: 12px;
+            border: 1px solid #333333;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 220px;
+        }
+
+        label {
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            color: #cccccc;
+        }
+
+        span {
+            color: #ffffff;
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 1.2rem;
+        }
+
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: #40c4ff;
+        }
+
+        button {
+            background-color: #222222;
+            color: #40c4ff;
+            border: 1px solid #40c4ff;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #40c4ff;
+            color: #000000;
+            box-shadow: 0 4px 12px rgba(64, 196, 255, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <h2>MSE Line of Best Fit</h2>
+    <p class="subtitle">Drag the points or move the sliders.</p>
+    
+    <div id="mse-display">MSE: 0.000</div>
+    <div id="formula-display">y = -0.30x + -2.00</div>
+
+    <canvas id="mseCanvas" width="800" height="450"></canvas>
+
+    <div class="controls">
+        <div class="slider-container">
+            <label for="slope">Slope (m): <span id="slope-val">-0.30</span></label>
+            <input type="range" id="slope" min="-2" max="3" step="0.01" value="-0.3">
+        </div>
+        <div class="slider-container">
+            <label for="intercept">Y-Intercept (b): <span id="intercept-val">-2.00</span></label>
+            <input type="range" id="intercept" min="-5" max="10" step="0.01" value="-2">
+        </div>
+        <button onclick="autoFit()">Auto-Fit (Least Squares)</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mseCanvas');
+        const ctx = canvas.getContext('2d');
+        const slopeSlider = document.getElementById('slope');
+        const interceptSlider = document.getElementById('intercept');
+        const slopeVal = document.getElementById('slope-val');
+        const interceptVal = document.getElementById('intercept-val');
+        const mseDisplay = document.getElementById('mse-display');
+        const formulaDisplay = document.getElementById('formula-display');
+
+        // Initial Data Points from screenshot
+        let points = [
+            {x: 1, y: 2},
+            {x: 2, y: 3},
+            {x: 3, y: 5},
+            {x: 4, y: 4},
+            {x: 5, y: 6}
+        ];
+
+        // Graph boundaries
+        const minX = 0, maxX = 8;
+        const minY = -4, maxY = 10;
+
+        // Mouse Dragging State
+        let isDragging = false;
+        let dragIndex = -1;
+
+        // Coordinate Mapping Functions
+        function mapX(x) { return (x - minX) / (maxX - minX) * canvas.width; }
+        function mapY(y) { return canvas.height - ((y - minY) / (maxY - minY) * canvas.height); }
+        function unmapX(px) { return (px / canvas.width) * (maxX - minX) + minX; }
+        function unmapY(py) { return ((canvas.height - py) / canvas.height) * (maxY - minY) + minY; }
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const m = parseFloat(slopeSlider.value);
+            const b = parseFloat(interceptSlider.value);
+            
+            slopeVal.innerText = m.toFixed(2);
+            interceptVal.innerText = b.toFixed(2);
+            formulaDisplay.innerText = `y = ${m.toFixed(2)}x + ${b.toFixed(2)}`;
+
+            // 1. Draw Grid
+            ctx.strokeStyle = '#222222';
+            ctx.lineWidth = 1;
+            for(let i = minX; i <= maxX; i++) {
+                ctx.beginPath(); ctx.moveTo(mapX(i), 0); ctx.lineTo(mapX(i), canvas.height); ctx.stroke();
+            }
+            for(let i = minY; i <= maxY; i++) {
+                ctx.beginPath(); ctx.moveTo(0, mapY(i)); ctx.lineTo(canvas.width, mapY(i)); ctx.stroke();
+            }
+
+            // Draw zero-axes heavier
+            ctx.strokeStyle = '#444444';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, mapY(0)); ctx.lineTo(canvas.width, mapY(0)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(mapX(0), 0); ctx.lineTo(mapX(0), canvas.height); ctx.stroke();
+
+            let totalSquaredError = 0;
+
+            // 2. Draw Squares and Error Lines (Blue theme)
+            points.forEach(point => {
+                const predictedY = m * point.x + b;
+                const error = point.y - predictedY;
+                totalSquaredError += (error * error);
+
+                const px = mapX(point.x);
+                const py = mapY(point.y);
+                const predY_canvas = mapY(predictedY);
+
+                // Ensure perfect visual squares by using the vertical pixel difference for both width and height
+                const pixelSize = Math.abs(predY_canvas - py); 
+
+                ctx.fillStyle = 'rgba(64, 196, 255, 0.2)'; // Translucent blue
+                ctx.strokeStyle = 'rgba(64, 196, 255, 0.5)';
+                ctx.lineWidth = 1;
+
+                ctx.beginPath();
+                if (point.y > predictedY) {
+                    ctx.rect(px, py, pixelSize, pixelSize); 
+                } else {
+                    ctx.rect(px, predY_canvas, pixelSize, pixelSize);
+                }
+                ctx.fill();
+                ctx.stroke();
+
+                // Draw Error Line (Vertical dashed, white)
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(px, py);
+                ctx.lineTo(px, predY_canvas);
+                ctx.stroke();
+                ctx.setLineDash([]); 
+            });
+
+            // Update MSE Text
+            const mse = totalSquaredError / points.length;
+            mseDisplay.innerText = `MSE: ${mse.toFixed(3)}`;
+
+            // 3. Draw Prediction Line
+            ctx.strokeStyle = '#40c4ff'; // Solid blue line
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(mapX(minX), mapY(m * minX + b));
+            ctx.lineTo(mapX(maxX), mapY(m * maxX + b));
+            ctx.stroke();
+
+            // 4. Draw Draggable Data Points
+            points.forEach((point, i) => {
+                ctx.fillStyle = '#ffffff'; // White center
+                ctx.strokeStyle = (i === dragIndex) ? '#00e676' : '#40c4ff'; // Highlight ring if dragging
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(mapX(point.x), mapY(point.y), 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            });
+        }
+
+        // --- Interaction Logic ---
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Check if user clicked near a point
+            points.forEach((p, i) => {
+                const px = mapX(p.x);
+                const py = mapY(p.y);
+                if (Math.hypot(px - mouseX, py - mouseY) < 15) {
+                    isDragging = true;
+                    dragIndex = i;
+                }
+            });
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging && dragIndex !== -1) {
+                const rect = canvas.getBoundingClientRect();
+                points[dragIndex].x = unmapX(e.clientX - rect.left);
+                points[dragIndex].y = unmapY(e.clientY - rect.top);
+                drawGraph();
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+            dragIndex = -1;
+            drawGraph();
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            dragIndex = -1;
+            drawGraph();
+        });
+
+        // Sliders
+        slopeSlider.addEventListener('input', drawGraph);
+        interceptSlider.addEventListener('input', drawGraph);
+
+        // Auto-Fit Math (Calculates exact Lowest MSE)
+        window.autoFit = function() {
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            const n = points.length;
+            points.forEach(p => {
+                sumX += p.x; sumY += p.y;
+                sumXY += p.x * p.y; sumX2 += p.x * p.x;
+            });
+            
+            const optimalM = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const optimalB = (sumY - optimalM * sumX) / n;
+            
+            slopeSlider.value = optimalM;
+            interceptSlider.value = optimalB;
+            drawGraph();
+        }
+
+        // Initial render
+        drawGraph();
+    </script>
+</body>
+</html>

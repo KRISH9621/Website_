@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoidX Initiative | KD-Trees</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --brand-accent: #00f0ff;
+            --brand-dark: #020617;
+            --surface-color: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body, html { margin: 0; padding: 0; background-color: var(--brand-dark); color: var(--text-main); font-family: 'Inter', sans-serif; overflow-x: hidden; line-height: 1.8; }
+        .grid-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -10; background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 50px 50px; }
+        nav { padding: 30px 5vw; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .logo { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; color: #fff; letter-spacing: 2px; text-decoration: none; }
+        .logo span { color: var(--brand-accent); }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
+        .back-link:hover { color: var(--brand-accent); }
+        .container { max-width: 900px; margin: 0 auto; padding: 100px 5vw; }
+
+        h1 { font-family: 'Space Grotesk', sans-serif; font-size: 3.5rem; font-weight: 700; margin: 0 0 20px 0; line-height: 1.1; letter-spacing: -1px; }
+        h2 { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; color: var(--brand-accent); margin-top: 60px; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 10px; }
+        h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; color: #fff; margin-top: 40px; margin-bottom: 20px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 10px;}
+        h5 { font-family: 'Space Grotesk', sans-serif; font-size: 2.3rem; color: #f4a920; margin-top: 30px; margin-bottom: 20px;}
+        p, li { font-size: 1.15rem; color: var(--text-muted); margin-bottom: 25px; }
+        strong { color: #fff; }
+        .mjx-chtml { color: #f0ae9de2 !important; margin: 20px 0; }
+
+        .author-byline { display: flex; align-items: center; gap: 15px; margin-top: -10px; margin-bottom: 50px; padding-bottom: 30px; border-bottom: 1px solid rgba(0, 240, 255, 0.1); }
+        .author-avatar { width: 50px; height: 50px; border-radius: 50%; background-color: #1e293b; border: 2px solid rgba(0, 240, 255, 0.3); object-fit: cover; }
+        .author-info { display: flex; flex-direction: column; }
+        .author-name { color: #fff; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.1rem; text-decoration: none; transition: color 0.3s; }
+        .author-name:hover { color: var(--brand-accent); }
+        .author-meta { color: var(--text-muted); font-size: 0.85rem; letter-spacing: 0.5px; }
+
+        /* --- REUSABLE COMPONENTS (For Videos & Widgets) --- */
+        .reference-section {
+            margin: 60px 0; padding: 30px; background: rgba(0, 240, 255, 0.02);
+            border-radius: 12px; border: 1px solid rgba(0, 240, 255, 0.1);
+        }
+        .video-wrapper {
+            position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+            border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 20px;
+        }
+        .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        /* --- SIMULATION STYLES --- */
+        .sim-wrapper { background: #0a0a0a; padding: 40px; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05); border: 1px solid rgba(0, 240, 255, 0.2); display: flex; flex-direction: column; align-items: center; margin: 60px 0; }
+        
+        #controls { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center; }
+        button.sim-btn { background-color: #222; color: #fff; border: 1px solid #444; padding: 12px 24px; cursor: pointer; border-radius: 6px; font-size: 15px; font-family: 'Space Grotesk'; font-weight: 600; transition: 0.2s; }
+        button.sim-btn:hover { background-color: #333; border-color: #666; }
+        button.sim-btn:active { transform: scale(0.98); }
+        #btn-generate { border-left: 4px solid var(--brand-accent); }
+        #btn-clear { border-left: 4px solid #ff4757; }
+
+        canvas#kdCanvas { 
+            background-color: #111; 
+            border: 1px solid #333; 
+            border-radius: 8px; 
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8); 
+            cursor: crosshair;
+            width: 100%;
+            max-width: 800px;
+            height: auto; /* Ensures aspect ratio is maintained without scrolling */
+        }
+        
+        .sim-instructions { color: #94a3b8; font-size: 0.95rem; margin-bottom: 25px; text-align: center; }
+
+        footer { padding: 50px 5vw; text-align: center; color: var(--text-muted); font-size: 0.95rem; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 80px; background: rgba(2, 6, 23, 0.8); }
+        footer a { color: var(--brand-accent); text-decoration: none; font-weight: 600; transition: 0.3s; }
+        footer a:hover { text-shadow: 0 0 10px rgba(0, 240, 255, 0.5); }
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+
+    <nav>
+        <a href="index.html" class="logo">VoidX <span>Initiative</span></a>
+        <a href="index.html" class="back-link">← Back to Hub</a>
+    </nav>
+
+    <div class="container">
+        <h1>KD-TREES ~The Architecture of Speed</h1>
+        
+        <div class="author-byline">
+            <img src="your-profile-pic.jpg" alt="Krishnanand" class="author-avatar" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%2394a3b8\'><path d=\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\'/></svg>'">
+            <div class="author-info">
+                <a href="about_me.html" class="author-name">By Krishnanand</a>
+                <span class="author-meta">Lead Architect, VoidX Initiative</span>
+            </div>
+        </div>
+
+        <h5>Hey learner!</h5>
+        <p>A KD Tree (short for K-Dimensional Tree) is a clever way computers organize and search for data points in space.</p>
+
+        <h2>The Problem: Finding the Nearest Coffee Shop</h2>
+        <p>Imagine you are standing somewhere in a large city, and you want to find the closest coffee shop. If the computer just had a simple list of all 1,000 coffee shops in the city, it would have to calculate the distance between you and <em>every single one</em> of them to find the closest one. That takes a lot of time.</p>
+        <p>A KD Tree organizes the map in a way that allows the computer to instantly ignore 90% of the map and only look at the shops immediately around you.</p>
+        <div class="sim-wrapper">
+            <h2 style="font-family: 'Space Grotesk'; font-size: 1.8rem; margin-top: 0; text-align: center; color: #fff;">Nearest Neighbor Visualization</h2>
+            
+            <div class="sim-instructions">
+                Click anywhere on the grid to place a Query Point. Watch the algorithm traverse the bounding boxes to find the closest target. <br>
+                X-splits are <span style="color:#ff4757; font-weight:bold;">Red</span>. Y-splits are <span style="color:#00f0ff; font-weight:bold;">Blue</span>.
+            </div>
+
+            <div id="controls">
+                <button class="sim-btn" id="btn-generate" onclick="generateNewPoints()">Generate Random Points</button>
+                <button class="sim-btn" id="btn-clear" onclick="clearQuery()">Clear Query Point</button>
+            </div>
+            
+            <canvas id="kdCanvas" width="800" height="450"></canvas>
+        </div>
+
+        <h2>How a KD Tree Works (The Slicing Method)</h2>
+        <p>Instead of a simple list, a KD tree divides the map by slicing it into smaller and smaller boxes. Let's look at a 2D map (where points have an X and Y coordinate):</p>
+        <ul>
+            <li><strong>Slice Left and Right (X-axis):</strong> The computer looks at all the points on the map and draws a vertical line straight down the middle, splitting the points so half are on the left and half are on the right.</li>
+            <li><strong>Slice Top and Bottom (Y-axis):</strong> Next, it looks at the left half and draws a horizontal line, splitting it into a top and bottom section. It does the same for the right half.</li>
+            <li><strong>Repeat:</strong> It keeps repeating this process—alternating between vertical slices and horizontal slices—until every single point is inside its own little box.</li>
+        </ul>
+
+        <h2>Why is it called a "Tree"?</h2>
+        <p>Every time the computer makes a slice, it creates a "branch" in its memory.</p>
+        <ul>
+            <li>"Are you left or right of the first line?" (Branch 1)</li>
+            <li>"Are you above or below the second line?" (Branch 2)</li>
+        </ul>
+        <p>When you ask the computer to find your nearest coffee shop, it plays a game of "20 Questions" using this tree. It quickly figures out which "box" you are standing in by following the branches. Once it finds your box, it only needs to check the distances to the few coffee shops in that specific box (and maybe the boxes immediately next to it), completely ignoring the rest of the city.</p>
+
+        <h2>What does "K-Dimensional" mean?</h2>
+        <p>The "K" is just a math placeholder for a number.</p>
+        <ul>
+            <li>If you are organizing points on a flat map (X, Y), it's a <strong>2D Tree</strong>.</li>
+            <li>If you are organizing points in a 3D video game world (X, Y, Z), it's a <strong>3D Tree</strong>.</li>
+            <li>If you are a computer organizing data with 10 different traits (like sorting houses by price, square footage, number of bedrooms, etc.), it's a <strong>10D Tree</strong>.</li>
+        </ul>
+        <p><strong>In short:</strong> A KD tree is a filing system that chops a space into smaller and smaller sections, making it incredibly fast for a computer to find "nearest neighbors" without having to look at every single piece of data.</p>
+
+        <div class="reference-section">
+            <h3 style="border-bottom: none;">Visualizing the Tree</h3>
+            <p>If you want to see exactly how these splits map to a physical binary tree structure, this breakdown by Computerphile brilliantly visualizes the process of building and querying the tree.</p>
+            <div class="video-wrapper">
+                <iframe 
+                    src="https://www.youtube.com/embed/BK5x7IUTIyU" 
+                    title="KD-Trees Computerphile" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </div>
+
+        
+        <h2>1. The Mathematics of Construction</h2>
+        <p>To understand the KD tree with mathematical rigor, we must look at two distinct algorithms: Construction (how the tree is built) and Nearest Neighbor Search (how we mathematically traverse it).</p>
+        <p>A KD tree is fundamentally a binary tree where every internal node represents a splitting hyperplane that divides the space into two half-spaces. Here is the complete mechanical and mathematical breakdown.</p>
+        
+        <p>Suppose we have a set of \(n\) points, \(P = \{p_1, p_2, \dots, p_n\}\), where each point exists in a \(k\)-dimensional space \(\mathbb{R}^k\). Each point \(p\) can be represented as a vector of coordinates: \((x_0, x_1, \dots, x_{k-1})\).</p>
+        <p>To build the tree, we recursively partition the points. At each step, we must make two mathematical choices:</p>
+        
+        <h3>A. Choosing the Splitting Axis</h3>
+        <p>As we move down the tree, we cycle through the dimensions. If we are at depth \(d\) in the tree, the axis \(a\) we use to split the data is calculated using the modulo operator:</p>
+        $$a = d \pmod k$$
+        <p>For example, in 3D space (\(k=3\)): At depth 0, we split along the X-axis (\(a=0\)). At depth 1, the Y-axis (\(a=1\)). At depth 2, the Z-axis (\(a=2\)). At depth 3, we loop back to the X-axis (\(a=0\)).</p>
+        
+        <h3>B. Choosing the Splitting Value</h3>
+        <p>Once we have our axis \(a\), we extract the \(a\)-th coordinate from every point in our current subset. We sort these coordinates and find the <strong>median</strong> value, \(m\).</p>
+        <p>The median becomes the splitting hyperplane.</p>
+        <ul>
+            <li>Points where coordinate \(x_a \le m\) go to the <strong>left subtree</strong>.</li>
+            <li>Points where coordinate \(x_a > m\) go to the <strong>right subtree</strong>.</li>
+        </ul>
+        <p>This guarantees the tree is balanced. Because sorting takes \(O(n \log n)\) time, the mathematical time complexity to build the entire tree is \(O(n \log n)\).</p>
+
+        <h2>2. The Mathematics of Nearest Neighbor Search (NNS)</h2>
+        <p>This is where the true mathematical elegance of the KD tree shines. Given a query point \(Q\), we want to find the point \(P_{best}\) in the tree that minimizes the Euclidean distance.</p>
+        <p>The Euclidean distance between \(Q\) and any point \(P\) is:</p>
+        $$d(Q, P) = \sqrt{\sum_{i=0}^{k-1} (Q_i - P_i)^2}$$
+        
+        <p>The search algorithm works in three phases:</p>
+        
+        <h3>Phase 1: Drill Down (The Greedy Search)</h3>
+        <p>We start at the root and move down the tree just as if we were going to insert \(Q\). At each node, we compare \(Q\)'s coordinate to the splitting plane and go left or right. We do this until we hit a leaf node. We calculate the distance from \(Q\) to this leaf point. This distance becomes our current minimum radius, \(r\).</p>
+        
+        <h3>Phase 2: Unwind and Check (The Pruning Rule)</h3>
+        <p>The leaf node is a good guess, but mathematically, it might not be the <em>absolute</em> closest point. A closer point might exist on the <em>other side</em> of a splitting plane we previously crossed.</p>
+        <p>As we unwind the recursion (move back up the tree), we apply a strict geometric test at every node: <strong>Does the hypersphere around \(Q\) with radius \(r\) intersect the splitting hyperplane?</strong></p>
+        <p>Let the current node represent a split on axis \(a\) at value \(m\). The perpendicular distance from \(Q\) to this splitting plane is simply the absolute difference along that axis:</p>
+        $$\text{Distance to Plane} = |Q_a - m|$$
+        
+        <p><strong>The Pruning Logic:</strong></p>
+        <ul>
+            <li><strong>If \(|Q_a - m| \ge r\):</strong> The sphere does <em>not</em> cross the boundary. We can mathematically prove that no point on the other side of the plane can be closer than \(r\). We <strong>prune</strong> that entire branch (ignore it).</li>
+            <li><strong>If \(|Q_a - m| < r\):</strong> The sphere <em>intersects</em> the boundary. There is a mathematical possibility that a closer point exists in the other branch. We must step into that branch and search it.</li>
+        </ul>
+        <p>Whenever we find a point closer than our current \(r\), we update \(r\) to this new, smaller distance. This shrinks our search sphere, making it even harder for future planes to intersect it, which accelerates the pruning process.</p>
+
+        <h2>3. The Curse of Dimensionality</h2>
+        <p>Why does this algorithm fail when \(k\) (dimensions) becomes large (e.g., \(k > 20\))?</p>
+        <p>It comes down to high-dimensional geometry. In high dimensions, the volume of a hypersphere concentrates near its surface, and the corners of the bounding boxes stretch far away. Because of this, the distance to the splitting plane, \(|Q_a - m|\), is almost always smaller than the radius \(r\) to the nearest neighbor.</p>
+        <p>Mathematically, the pruning condition (\(|Q_a - m| \ge r\)) is rarely met. The algorithm is forced to cross almost every splitting plane and search almost every branch, deteriorating from its optimal \(O(\log n)\) search time to \(O(n)\)—making it no better than a brute-force list search.</p>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('kdCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        let points = [];
+        let kdTreeRoot = null;
+        let queryPoint = null;
+        let nearestResult = null;
+        let animationRadius = 0;
+        let animationFrameId = null;
+
+        function distance(p1, p2) {
+            return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+        }
+
+        class Node {
+            constructor(point, axis) {
+                this.point = point;
+                this.axis = axis; 
+                this.left = null;
+                this.right = null;
+            }
+        }
+
+        function buildKDTree(pts, depth = 0) {
+            if (pts.length === 0) return null;
+            const axis = depth % 2; 
+            pts.sort((a, b) => axis === 0 ? a.x - b.x : a.y - b.y);
+            const medianIndex = Math.floor(pts.length / 2);
+            const node = new Node(pts[medianIndex], axis);
+            node.left = buildKDTree(pts.slice(0, medianIndex), depth + 1);
+            node.right = buildKDTree(pts.slice(medianIndex + 1), depth + 1);
+            return node;
+        }
+
+        function nearestNeighbor(node, target, depth, best) {
+            if (node === null) return best;
+            const axis = depth % 2;
+            let nextBest = best;
+
+            const d = distance(node.point, target);
+            if (best === null || d < best.dist) {
+                nextBest = { point: node.point, dist: d };
+            }
+
+            const isLeft = axis === 0 ? target.x < node.point.x : target.y < node.point.y;
+            const firstBranch = isLeft ? node.left : node.right;
+            const secondBranch = isLeft ? node.right : node.left;
+
+            nextBest = nearestNeighbor(firstBranch, target, depth + 1, nextBest);
+
+            const planeDist = axis === 0 ? Math.abs(target.x - node.point.x) : Math.abs(target.y - node.point.y);
+            
+            if (planeDist < nextBest.dist) {
+                nextBest = nearestNeighbor(secondBranch, target, depth + 1, nextBest);
+            }
+
+            return nextBest;
+        }
+
+        function drawTree(node, minX, maxX, minY, maxY) {
+            if (!node) return;
+
+            ctx.lineWidth = 1.5;
+            if (node.axis === 0) {
+                ctx.strokeStyle = 'rgba(255, 71, 87, 0.4)'; // Brand Red
+                ctx.beginPath();
+                ctx.moveTo(node.point.x, minY);
+                ctx.lineTo(node.point.x, maxY);
+                ctx.stroke();
+                drawTree(node.left, minX, node.point.x, minY, maxY);
+                drawTree(node.right, node.point.x, maxX, minY, maxY);
+            } else {
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.3)'; // Brand Cyan
+                ctx.beginPath();
+                ctx.moveTo(minX, node.point.y);
+                ctx.lineTo(maxX, node.point.y);
+                ctx.stroke();
+                drawTree(node.left, minX, maxX, minY, node.point.y);
+                drawTree(node.right, minX, maxX, node.point.y, maxY);
+            }
+        }
+
+        function drawPoints() {
+            ctx.fillStyle = '#ffffff';
+            points.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function renderScene() {
+            ctx.clearRect(0, 0, width, height);
+            
+            drawTree(kdTreeRoot, 0, width, 0, height);
+            drawPoints();
+
+            if (queryPoint) {
+                ctx.fillStyle = '#ffea00'; 
+                ctx.beginPath();
+                ctx.arc(queryPoint.x, queryPoint.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.font = "bold 14px 'Space Grotesk'";
+                ctx.fillStyle = "#ffea00";
+                ctx.fillText("Query", queryPoint.x + 10, queryPoint.y - 10);
+
+                if (nearestResult) {
+                    ctx.strokeStyle = '#50fa7b'; 
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(queryPoint.x, queryPoint.y, animationRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    if (animationRadius >= nearestResult.dist) {
+                        ctx.fillStyle = '#50fa7b';
+                        ctx.beginPath();
+                        ctx.arc(nearestResult.point.x, nearestResult.point.y, 7, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = "#50fa7b";
+                        ctx.fillText("Nearest Neighbor", nearestResult.point.x + 12, nearestResult.point.y - 12);
+
+                        ctx.setLineDash([5, 5]); 
+                        ctx.beginPath();
+                        ctx.moveTo(queryPoint.x, queryPoint.y);
+                        ctx.lineTo(nearestResult.point.x, nearestResult.point.y);
+                        ctx.stroke();
+                        ctx.setLineDash([]); 
+                    }
+                }
+            }
+        }
+
+        function animateSearch() {
+            if (nearestResult && animationRadius < nearestResult.dist) {
+                animationRadius += Math.max(3, nearestResult.dist / 25); 
+                if (animationRadius > nearestResult.dist) animationRadius = nearestResult.dist;
+                renderScene();
+                animationFrameId = requestAnimationFrame(animateSearch);
+            } else {
+                renderScene(); 
+            }
+        }
+
+        function generateNewPoints() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            points = [];
+            for (let i = 0; i < 40; i++) {
+                points.push({
+                    x: Math.random() * (width - 60) + 30,
+                    y: Math.random() * (height - 60) + 30
+                });
+            }
+            kdTreeRoot = buildKDTree([...points]); 
+            queryPoint = null;
+            nearestResult = null;
+            renderScene();
+        }
+
+        function clearQuery() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            queryPoint = null;
+            nearestResult = null;
+            animationRadius = 0;
+            renderScene();
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            // Scale logic ensures clicks are accurate even if the CSS resizes the canvas
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            queryPoint = {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+            
+            if (kdTreeRoot) {
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                nearestResult = nearestNeighbor(kdTreeRoot, queryPoint, 0, null);
+                animationRadius = 0;
+                animateSearch();
+            }
+        });
+
+        // Initialize on load
+        generateNewPoints();
+
+    </script>
+
+    <footer>
+        VoidX Initiative © 2026. Architected and maintained by <a href="about_me.html">Krishnanand</a>. <br>
+        <span style="font-size: 0.85rem; opacity: 0.7; display: block; margin-top: 10px;">Built for the advancement of open-source AI education.</span>
+    </footer>
+
+</body>
+</html>
