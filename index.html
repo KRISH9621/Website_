@@ -8,6 +8,73 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
+     
+     /* --- GOLDEN GLOW MASTER CARD --- */
+        .module-card.golden-glow {
+    border: 1px solid rgba(255, 183, 0, 0.4);
+    box-shadow: 0 0 20px rgba(255, 183, 0, 0.1), inset 0 0 10px rgba(255, 183, 0, 0.05);
+    background: linear-gradient(180deg, rgba(255, 183, 0, 0.03) 0%, rgba(15, 23, 42, 0.8) 100%);
+    transition: all 0.3s ease;
+}
+
+.module-card.golden-glow:hover {
+    border-color: rgba(255, 183, 0, 0.8);
+    box-shadow: 0 10px 30px rgba(255, 183, 0, 0.25), inset 0 0 15px rgba(255, 183, 0, 0.1);
+    transform: translateY(-5px);
+}
+
+.golden-glow .tag strong {
+    color: #ffb700;
+    text-shadow: 0 0 8px rgba(255, 183, 0, 0.4);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.golden-glow h3 {
+    color: #ffb700;
+    text-shadow: 0 0 10px rgba(255, 183, 0, 0.2);
+}
+
+/* --- CHAPTER BUTTON GRID --- */
+.chapter-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 25px;
+}
+
+.btn-chapter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: rgba(255, 183, 0, 0.05);
+    border: 1px solid rgba(255, 183, 0, 0.2);
+    color: #ffb700;
+    text-decoration: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.btn-chapter:hover {
+    background: #ffb700;
+    color: #020617; /* VoidX dark background color for contrast */
+    box-shadow: 0 0 15px rgba(255, 183, 0, 0.4);
+    border-color: #ffb700;
+}
+
+.chapter-number {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    font-family: monospace;
+}
+
+.btn-chapter:hover .chapter-number {
+    opacity: 1; /* Makes the chapter number pop on hover */
+}
         :root {
             --brand-accent: #00f0ff;
             --brand-dark: #020617;
@@ -129,7 +196,33 @@
             <h2 class="section-title">Latest Learning Modules</h2>
             
             <div class="module-grid">
-                
+                <div class="module-card golden-glow">
+    <span class="tag"><strong>Master Curriculum</strong></span>
+    <h3>The Calculus Series</h3>
+    <p>This module leads you through the foundational concepts of calculus, from the history of its development to its applications in modern machine learning .</p>
+    
+    <div class="chapter-grid">
+        <a href="calculus/history_of_calculus.html" class="btn-chapter">
+            <span class="chapter-title">The History of Calculus</span>
+            <span class="chapter-number">CH 01</span>
+        </a>
+        
+        <a href="calculus/derivatives.html" class="btn-chapter">
+            <span class="chapter-title">Derivatives & Slopes</span>
+            <span class="chapter-number">CH 02</span>
+        </a>
+        
+        <a href="calculus/integrals.html" class="btn-chapter">
+            <span class="chapter-title">Integrals & Area Under Curves</span>
+            <span class="chapter-number">CH 03</span>
+        </a>
+        
+        <a href="calculus/chain_rule.html" class="btn-chapter">
+            <span class="chapter-title">The Chain Rule</span>
+            <span class="chapter-number">CH 04</span>
+        </a>
+    </div>
+</div>
                 <div class="module-card">
                     <span class="tag"><span style="color: rgba(255, 183, 0, 0.988);"><strong>Calculus & Mesh Processing</strong></span></span>
                     <h3>Laplacian Smoothing & De-Noising</h3>
