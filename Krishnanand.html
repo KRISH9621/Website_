@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Krishnanand | Researcher Profile</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #ffffff; 
+            --text-main: #1e293b; /* Dark slate for headings */
+            --text-muted: #64748b; /* Grey for details */
+            --accent-color: #1b8888; /* Teal/Sea green for institutions */
+            --line-color: #e2e8f0; /* Light grey for the timeline border */
+             --accent-color1: #ff4545; /* Teal/Sea green for institutions */
+        }
+
+        body, html {
+            margin: 0; 
+            padding: 0;
+            background-color: var(--bg-color); 
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+        }
+
+        .container { 
+            max-width: 850px; 
+            margin: 0 auto; 
+            padding: 80px 20px; 
+        }
+
+      
+        .top-visuals {
+            display: flex;
+            justify-content: space-between; /* This pushes the items to the far left and right edges */
+            align-items: center;
+            margin-bottom: 0px;
+            flex-wrap: wrap;
+        }
+
+        /* Profile image (Increased size, matching rounded rectangle) */
+        .profile-image {
+            width: 260px;  /* Increased width */
+            height: 350px; /* Increased height */
+            border-radius: 50px; /* Smooth corners for the larger size */
+            object-fit: cover;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); /* Slightly deeper shadow */
+        }
+
+        /* Sticky Note Styling (Definite fixed size) */
+        .sticky-note {
+            width: 300px;  /* Definite fixed width */
+            height: 320px; /* Definite fixed height */
+            box-sizing: border-box; /* Keeps padding inside the defined width/height */
+            background-color: #fef08a; 
+            padding: 30px 25px; 
+            transform: rotate(4deg); 
+            box-shadow: 5px 8px 20px rgba(0, 0, 0, 0.12);
+            position: relative;
+            font-family: 'Kalam', cursive, sans-serif; 
+            color: #334155;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Centers the text vertically inside the fixed height */
+        }
+        
+        /* Little tape effect for the sticky note */
+        .sticky-note::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-2deg);
+            width: 90px;
+            height: 28px;
+            background-color: rgba(255, 255, 255, 0.45);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        /* Little tape effect for the sticky note */
+        .sticky-note::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-2deg);
+            width: 80px;
+            height: 25px;
+            background-color: rgba(255, 253, 253, 0.4);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .sticky-note h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.3rem;
+            border-bottom: 1px dashed #edbd57;
+            padding-bottom: 5px;
+        }
+
+        .sticky-note ul {
+            padding-left: 20px;
+            margin: 0;
+            font-size: 1.05rem;
+            line-height: 1.4;
+        }
+
+        .sticky-note li {
+            margin-bottom: 8px;
+        }
+
+        /* --- INTRO SECTION (Centered below visuals) --- */
+        .intro-section {
+            text-align: center;
+            max-width: 650px;
+            margin: 0 auto 70px auto;
+        }
+
+        .intro-section h1 {
+            font-size: 2.8rem;
+            margin: 0 0 15px 0;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .intro-section p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+        }
+
+        .contact-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .contact-links a:hover {
+            text-decoration: underline;
+        }
+
+        /* --- TIMELINE SECTIONS (Matches the Image) --- */
+        .timeline-section {
+            margin-bottom: 60px;
+        }
+
+        .timeline-section h2 {
+            font-size: 1.7rem;
+            color: var(--text-main);
+            margin-bottom: 30px;
+            font-weight: 600;
+            border: none; /* Removed the bottom border from previous design */
+        }
+
+        .timeline-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 0 10px;
+            border-left: 2px solid var(--line-color);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 25px;
+            margin-bottom: 35px;
+        }
+
+        /* The Teal Dot */
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -7px; /* Centers the dot perfectly on the 2px line */
+            top: 7px;
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-color1);
+            border-radius: 50%;
+        }
+
+        /* Typography within the timeline */
+        .item-title {
+            font-size: 1.15rem;
+            color: var(--text-main);
+            font-weight: 500;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .item-subtitle {
+            font-size: 1.05rem;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+        }
+
+        .item-details {
+            font-size: 1rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        
+        .item-details p {
+            margin: 5px 0 0 0;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            margin-top: 60px;
+            border-top: 1px solid var(--line-color);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- VISUALS: IMAGE (LEFT) & STICKY NOTE (RIGHT) -->
+        <div class="top-visuals">
+            <img src="profile.jpeg" alt="Krishnanand" class="profile-image" 
+                 onerror="this.src='https://via.placeholder.com/180x230/cccccc/333333?text=K'">
+            
+            <div class="sticky-note">
+                <h3>Current Goals</h3>
+                <ul>
+                    <li>Develop VoidX Engine prototype</li>
+                    <li>NTU Singapore / Peking (YUKE) applications</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- CENTERED INTRODUCTION -->
+        <div class="intro-section">
+            <h1>Krishnanand</h1>
+            <p>I am a developer, researcher, educator and Senior secondary student. My current work focuses on developing deterministic 3D mesh processing pipelines and mathematical auto-rigging pipeline. I am also working on Developing a biological cycle model to simulate emotional states in different large language models. Apart from this,I owned an open sourced platform for learning complex mathematical concepts using interactive visualizations.  Feel free to reach out for discussions or collaborations!</p>
+            <div class="contact-links">
+                <a href="nanddynasty5@example.com">Email</a>
+                <a href="https://github.com/KRISH9621">GitHub</a>
+                <a href="https://orcid.org/0009-0004-3538-8444">ORCID</a>
+            </div>
+        </div>
+
+        <!-- EDUCATION SECTION -->
+        <div class="timeline-section">
+            <h2>Education</h2>
+            <ul class="timeline-list">
+                <li class="timeline-item">
+                    <div class="item-title">College</div>
+                    <div class="item-subtitle">Prospective Applicant</div>
+                    <div class="item-details">
+                        Currently preparing for college applications, focusing on Computer Science and Mathematics programs.
+                    </div>
+                </li>
+                <li class="timeline-item">
+                    <div class="item-title">Class 12 (Higher Secondary)</div>
+                    <div class="item-subtitle">National Institute of Open Schooling (NIOS)</div>
+                    <div class="item-details">
+                        Current Coursework: Physics, Chemistry, Mathematics, Computer Science (Python,C++), and English
+                    </div>
+                </li>
+                <li class="timeline-item">
+                    <div class="item-title">Class 10 (High School)</div>
+                    <div class="item-subtitle">Central Board of Secondary Education (CBSE)</div>
+                    <div class="item-details">
+                        Coursework: Science, Mathematics, Computer Science (Python),English,Social Studies, and Hindi
+                    </div>
+                </li>
+                
+            </ul>
+        </div>
+
+        <!-- PROJECT EXPERIENCE SECTION -->
+        <div class="timeline-section">
+            <h2>Project Experience</h2>
+            <ul class="timeline-list">
+                <li class="timeline-item">
+                    <div class="item-title">Interdisciplinary Research 1(Progress: In Development)</div>
+                    <div class="item-subtitle">Integrated Biological Cycle Modeling for LLM Emotional State Simulation</div>
+                    <div class="item-details">
+                        Developing a biological cycle model to simulate emotional states in different large language models. The main motive is to understand the emotional responses of LLMS and their potential application in AI-driven mental health support systems. 
+                    </div>
+                    
+                </li>
+                <li class="timeline-item">
+                    <div class="item-title">Interdisciplinary Research 2(Progress: Last Stages)</div>
+                    <div class="item-subtitle">A Mathematical Approach for Auto-Rigging 3D Models Using 2D MediaPipe</div>
+                    <div class="item-details">
+                    This project focuses on developing a mathematical framework for auto-rigging 3D models using 2D pose estimation data from MediaPipe. The goal is to streamline the rigging process in 3D animation and game development, making it more efficient and accessible without relying on manual rigging techniques and heavily dependent on neural training. The project is in its final stages of getting endorsement, with promising results in preliminary tests.
+                    </div>
+                </li>
+
+                <li class="timeline-item">
+                    <div class="item-title">VoidX Initiative</div>
+                    <div class="item-subtitle">Open Sourced Learning Platform </div>
+                    <div class="item-details">
+                        Lead architect and developer of a web-based platform that utilizes simualtions and Daily life examples to provide an interactive learning experience. The platform aims to enhance understanding of complex mathematical concepts used in computer science through visualization and simulation.
+                    </div>
+                </li>
+        <!--News Section -->
+        <div class="timeline-section">
+            <h2>Project Experience</h2>
+            <ul class="timeline-list">        
+            </ul>
+        </div>
+
+    </div>
+
+    <footer>
+        © 2026 Krishnanand. Built for the advancement of open-source AI education.
+    </footer>
+
+</body>
+</html>
